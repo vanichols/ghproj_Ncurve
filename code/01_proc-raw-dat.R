@@ -64,7 +64,7 @@ dat %>%
 
 
 raw2 <- read_excel("data/raw/CompiledData.xlsx") %>% 
-  rename(site_id = pub_reference)
+  rename(site = pub_reference)
 
 raw2 %>% write_csv("data/tidy/td_crop-by-year.csv")
 

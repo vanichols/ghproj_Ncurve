@@ -1,4 +1,4 @@
-obs_no,study,site_id,pub_year,loc_citystate,lat,long,exp_type,wt_depth,tile_depth,tile_space,cropsys_tillage,cropsys,year,crop,crop_p_mnth,crop_p_mnth2,crop_p_dom,n_rate,in_season_rain,annual_rain,drainage_mm,leaching_kgha,flow_weighted_no3,yield_bua
+obs_no,study,site,pub_year,loc_citystate,lat,long,exp_type,wt_depth,tile_depth,tile_space,cropsys_tillage,cropsys,year,crop,crop_p_mnth,crop_p_mnth2,crop_p_dom,n_rate,in_season_rain,annual_rain,drainage_mm,leaching_kgha,flow_weighted_no3,yield_bua
 1,1,Randall,1997,"Lamberton, Minnesota",44.239,-96.3189,Rotation,120,120,2800,NT,CC,1994,Corn,April,4,25,0,460,666,160.08,5.6,3.498250874562718,55.578
 2,1,Randall,1997,"Lamberton, Minnesota",44.239,-96.3189,Rotation,120,120,2800,NT,CC,1995,Corn,May,5,11,0,542,876,412.985,24.3,5.883990943981017,18.772
 3,1,Randall,1997,"Lamberton, Minnesota",44.239,-96.3189,Rotation,120,120,2800,NT,CC,1996,Corn,April,4,25,0,521,837,241.472,13.6,5.632122979061754,82.771

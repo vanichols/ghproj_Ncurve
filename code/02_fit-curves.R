@@ -9,25 +9,41 @@ library(broom)
 
 # read in data ------------------------------------------------------------
 
-dat <- read_csv("data/tidy/td_crop.csv")
+dat <- read_csv("data/tidy/td_crop-by-year.csv")
 
 
+#--start with just leaching_kgha, CC
+dat_leach <- 
+  dat %>% 
+  select(site, year, crop, cropsys, n_rate, leaching_kgha) %>% 
+  mutate_if(is.character, tolower) %>% 
+  #--remove gentry for now
+  filter(site != "gentry")
+
+#--something is wrong with gentry, I think
+dat_leach %>% 
+  filter(site_id == "gentry") %>% 
+  ggplot(aes(n_rate, leaching_kgha)) + 
+  geom_point(aes(color = crop), size = 4) + 
+  facet_grid(.~cropsys)
+
+dat_leach %>% 
+  filter(site_id == "gentry") %>% 
+  group_by(n_rate) %>% 
+  summarise(n = n())
 
 # fit curves --------------------------------------------------------------
 
 #--use a plateau-linear function
 ?SSplin
 
-# huggins:
-fit1 <- nls(leach ~ SSplin(nrate, a, xs, b), data = dat %>% filter(site == "huggins"))
+# huggins, no random effect of year:
+fit1 <- nls(leaching_kgha ~ SSplin(n_rate, a, xs, b), data = dat_sub %>% filter(site_id == "huggins"))
 summary(fit1)
 tidy(fit1)
 fitted(fit1) %>% tidy()
 
-dat_sub <- 
-  dat %>% 
-  filter(site %in% c("huggins", "gentry"))
-
+#--pretty sure I can map this. Go to nlraa_help, I try to fit a random effect of year
 
 # try mapping -------------------------------------------------------------
 
@@ -43,7 +59,7 @@ dat_parms <-
 
 #dat_parms <- 
   dat_sub %>% 
-  group_by(site, sys_trt) %>% 
+  group_by(site_id, cropsys) %>% 
   nest() %>% 
   mutate(mod = data %>% map(~nls(leach ~ SSplin(nrate, a, xs, b), data = .)),
          fits = mod %>% map(~fitted(.)),

@@ -34,3 +34,22 @@ plot(fit.nlme)
 
 ## Look at predictions
 plot(augPred(fit.nlme, level = 0:1))
+
+
+# actual paper example ----------------------------------------------------
+#https://cran.r-project.org/web/packages/nlraa/vignettes/nlraa-AgronJ-paper.html
+
+#--note there are 3 blocks
+sm %>% 
+  ggplot(aes(DOY, Yield)) + 
+  geom_point(aes(shape = Crop, color = Crop)) + 
+  facet_grid(.~Input)
+
+#--create an 'eu' that uniquely defines each 'curve'
+sm$eu <- with(sm, factor(Block):factor(Input):factor(Crop))
+#--get rid of the 0 yield at the day of planting
+sm2 <- subset(sm, DOY != 141)
+#The next step is to create the groupedData which is a convenient structre to be used throughout the fitting process in nlme.
+
+#--it seems like this is saying 'there is a curve of yield vs doy for each eu
+smG <- groupedData(Yield ~ DOY | eu, data = sm2)
