@@ -1,18 +1,17 @@
 # author: gina
 # created: 4/13/2020
 # purpose: process heather's data
+# last updated: 4/15/2020 added new files
 
 
 library(tidyverse)
 library(janitor)
+library(readxl)
 
-# read in data ------------------------------------------------------------
+# data averaged by year ------------------------------------------------------------
 
 raw <- read_csv("data/raw/Allcurvedata.csv") %>% 
   clean_names()
-
-
-# process -----------------------------------------------------------------
 
 #--make cropping system treatments explicit
 
@@ -45,7 +44,8 @@ dat <-
   mutate_if(is.character, tolower)
 
 
-# look at it --------------------------------------------------------------
+
+#--look at it
 
 dat %>% 
   ggplot(aes(nrate, leach)) + 
@@ -54,7 +54,23 @@ dat %>%
 
 
 
-# write it ----------------------------------------------------------------
+#--write it
 
 dat %>% 
   write_csv("data/tidy/td_crop.csv")
+
+
+# data by year ------------------------------------------------------------
+
+
+raw2 <- read_excel("data/raw/CompiledData.xlsx") %>% 
+  rename(site_id = pub_reference)
+
+raw2 %>% write_csv("data/tidy/td_crop-by-year.csv")
+
+# soil data ---------------------------------------------------------------
+
+#--need to think about the metrics we want
+
+soi <- read_csv("data/raw/soilallsites.csv")
+
