@@ -53,12 +53,14 @@ leach3 <-
   mutate(eu = paste(site, year, sep = "_"))
 
 #--look at it
-leach3 %>% 
+p1 <- leach3 %>% 
   ggplot(aes(n_rate, leaching_kgha, group = eu)) +
   geom_point() + 
   geom_line(aes(color = as.factor(year))) + 
   facet_grid(.~site)
 
+library(plotly)
+ggplotly(p1)
 
 leachG <- groupedData(leaching_kgha ~ n_rate |eu, data = leach3)
 
