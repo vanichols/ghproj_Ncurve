@@ -45,13 +45,20 @@ leach2 <- leach %>%
   filter(site != "gentry") %>% 
   mutate(eu = paste(cropsys, site, year, sep = "_"))
 
+
 #--hmm, let's just do the CC cropsys for now
 leach3 <- 
   leach2 %>% 
   filter(cropsys == "cc") %>% 
   mutate(eu = paste(site, year, sep = "_"))
 
-leach3
+#--look at it
+leach3 %>% 
+  ggplot(aes(n_rate, leaching_kgha, group = eu)) +
+  geom_point() + 
+  geom_line(aes(color = as.factor(year))) + 
+  facet_grid(.~site)
+
 
 leachG <- groupedData(leaching_kgha ~ n_rate |eu, data = leach3)
 
