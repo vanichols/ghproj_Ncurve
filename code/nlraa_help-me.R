@@ -1,44 +1,18 @@
-library(nlme)
-data(barley)
-barley$yearf <- as.factor(barley$year)
-barleyG <- groupedData(yield ~ NF | yearf, data = barley)
-#First step is to create the grouped data object. Then fit the asymptotic regression to each year and the mixed model.
-
-## Fit the nonlinear model for each year
-fit.nlis <- nlsList(yield ~ SSasymp(NF, Asym, R0, lrc), data = barleyG)
-## Use this to fit a nonlinear mixed model
-fit.nlme <- nlme(fit.nlis)
-## Investigate residuals
-plot(fit.nlme)
-
-## Look at predictions
-plot(augPred(fit.nlme, level = 0:1))
-
-
-dat$sitef <- as.factor(dat$site)
-datG <- groupedData(leach ~ nrate | sitef, data = dat)
-#First step is to create the grouped data object. Then fit the asymptotic regression to each year and the mixed model.
-
-
-
-## Fit the nonlinear model for each year
-#fit.nlis <- nlsList(yield ~ SSasymp(NF, Asym, R0, lrc), data = barleyG)
-
-fit1 <- nlsList(leach ~ SSplin(nrate, a, xs, b), data = datG)
-summary(fit1) %>% tidy()
-
-## Use this to fit a nonlinear mixed model
-fit.nlme <- nlme(fit.nlis)
-## Investigate residuals
-plot(fit.nlme)
-
-## Look at predictions
-plot(augPred(fit.nlme, level = 0:1))
+# author: gina
+# created; 4/10/2020
+# purpose: work through FEM example w/my data
+# last updated: 4/16/2020
 
 
 # actual paper example ----------------------------------------------------
 #https://cran.r-project.org/web/packages/nlraa/vignettes/nlraa-AgronJ-paper.html
 library(nlraa)
+library(nlme)
+library(dplyr)
+library(ggplot2)
+
+# fernando's data prep ----------------------------------------------------
+
 #--note there are 3 blocks
 sm %>% 
   ggplot(aes(DOY, Yield)) + 
@@ -47,31 +21,78 @@ sm %>%
 
 #--create an 'eu' that uniquely defines each 'curve'
 sm$eu <- with(sm, factor(Block):factor(Input):factor(Crop))
+
 #--get rid of the 0 yield at the day of planting
 sm2 <- subset(sm, DOY != 141)
-#The next step is to create the groupedData which is a convenient structre to be used throughout the fitting process in nlme.
 
-#--it seems like this is saying 'there is a curve of yield vs doy for each eu
+# The next step is to create the groupedData which is a convenient structre to be used throughout the fitting process in nlme.
+
+#--it seems like this is saying 'there is a curve of yield vs doy for each eu'
 smG <- groupedData(Yield ~ DOY | eu, data = sm2)
 
 
-# Use a beta growth function via SSbgf
-fit.lis <- nlsList(Yield ~ SSbgf(DOY, w.max, t.e, t.m), data = smG)
+# my data prep ------------------------------------------------------------
 
+#--my data
+leach <- read_csv("data/tidy/td_crop-by-year.csv") %>% 
+  select(site, year, cropsys, crop, leaching_kgha, n_rate) %>% 
+  arrange(site, year, n_rate) %>% 
+  filter(crop == 'corn') 
+
+#--there is still something wrong with gentry  
+#--remove it for now, create the eu
+leach2 <- leach %>% 
+  filter(site != "gentry") %>% 
+  mutate(eu = paste(cropsys, site, year, sep = "_"))
+
+#--hmm, let's just do the CC cropsys for now
+leach3 <- 
+  leach2 %>% 
+  filter(cropsys == "cc") %>% 
+  mutate(eu = paste(site, year, sep = "_"))
+
+leach3
+
+leachG <- groupedData(leaching_kgha ~ n_rate |eu, data = leach3)
+
+
+# just fitting a curve to each eu using nls -------------------------------
+
+# Use a beta growth function via SSbgf
+#fit.lis <- nlsList(Yield ~ SSbgf(DOY, w.max, t.e, t.m), data = smG)
 #ummmm, he says use SSbrgrp intead. He says it just behaves better.
 fit.lis <- nlsList(Yield ~ SSbgrp(DOY, w.max, t.e, t.m), data = smG)
 plot(fit.lis)
+plot(augPred(fit.lis, level = 0:1))
+
+#--mine is also getting an error right now, don't worry about it. 
+fit.lisL <- nlsList(leaching_kgha ~ SSplin(n_rate, a, xs, b), data = leachG)
+plot(fit.lisL)
+plot(augPred(fit.lisL, level = 0:1))
+
+#--which ones didn't converge?
+leach3 %>% 
+  filter(eu %in% c("kladivko_2000", "kladivko_1999", "sutherland_2012")) %>% 
+  ggplot(aes(n_rate, leaching_kgha)) +
+  geom_point() + 
+  geom_line() + 
+  facet_grid(.~eu)
 
 
-#--only 20 of the 24 possible fits got convergence
+# use nlme, which accepts fixed and random things -------------------------
 
 #--relax the convergence criteria (?)
+#--so right now it is just fitting one mack daddy model, right?
 fit.me <- nlme(fit.lis, control = list(maxIter = 100, msMaxiter = 300, pnlsMaxIter = 20))
- #### QUESTION. How does it know what I want as random?
-
-#--look at resids and preds
 plot(fit.me)
 plot(augPred(fit.me, level = 0:1))
+
+#--a curve that describes 'everything'
+fit.meL <- nlme(fit.lisL, control = list(maxIter = 100, msMaxiter = 300, pnlsMaxIter = 20))
+plot(fit.meL)
+plot(augPred(fit.meL, level = 0:1))
+#--converged fine
+
 
 
 #--I guess there might be something better, bgf2, which doesn't have a self-start
@@ -81,21 +102,35 @@ fit.lis2 <- nlsList(Yield ~ bgf2(DOY, w.max, w.b = 0, t.e, t.m, t.b = 141),
                     start = c(w.max = 30, t.e=280, t.m=240))
 plot(fit.lis2)
 
-#--ok now fit the non-linear mixed model?
+#--ok now fit the mackdaddy model to that new nls object
 fit.me2 <- nlme(fit.lis2)
+plot(augPred(fit.me2, level = 0:1))
 
-#--wait we want to updat the variance-covariance matrix to be simplified (?)
+#--update the variance-covariance matrix to be simplified (?)
+#--so we say w.max and t.e and t.m variation aren't related. I guess. SImpler, converges,so let's role with that. (?)
+#--I don't get this, I need to read about nlme
 fit2.me2 <- update(fit.me2, random = pdDiag(w.max + t.e + t.m ~ 1))
 anova(fit.me2, fit2.me2)
 
-#--so we said w.max and t.e and t.m aren't related. I guess. SImpler, converges,so let's role with that. (?)
+
+#--this didn't fit for me. I don't know why. 
+fit2.me2 <- update(fit.meL, random = pdDiag(a + xs + b ~ 1))
+# no idea what this error is
+
+################ STOPPED, need help. Nothing works after this. 
 
 
 fe <- fixef(fit2.me2) ## Some starting values with visual help
+feL <- fixef(fit.meL)
+
 # So we say these things vary by crop ( a fixed effect)
 # we have to give it 6 starting values bc we have a w.max, t.e, and t.m parameter for each crop (3 crops)
 fit3.me2 <- update(fit2.me2, fixed = list(w.max + t.e + t.m ~ Crop),
                   start = c(fe[1], -10, 20, fe[2], -40, 0, fe[3], -40, 0))
+
+#--ok here I am struggling.......
+fit3.meL <- update(fit.meL, fixed = list(a + xs + b ~ site))
+
 ## We next include the Input
 fe2 <- fixef(fit3.me2)
 fit4.me2 <- update(fit3.me2, fixed = list(w.max + t.e + t.m
