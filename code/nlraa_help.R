@@ -1,44 +1,9 @@
-library(nlme)
-data(barley)
-barley$yearf <- as.factor(barley$year)
-barleyG <- groupedData(yield ~ NF | yearf, data = barley)
-#First step is to create the grouped data object. Then fit the asymptotic regression to each year and the mixed model.
-
-## Fit the nonlinear model for each year
-fit.nlis <- nlsList(yield ~ SSasymp(NF, Asym, R0, lrc), data = barleyG)
-## Use this to fit a nonlinear mixed model
-fit.nlme <- nlme(fit.nlis)
-## Investigate residuals
-plot(fit.nlme)
-
-## Look at predictions
-plot(augPred(fit.nlme, level = 0:1))
-
-
-dat$sitef <- as.factor(dat$site)
-datG <- groupedData(leach ~ nrate | sitef, data = dat)
-#First step is to create the grouped data object. Then fit the asymptotic regression to each year and the mixed model.
-
-
-
-## Fit the nonlinear model for each year
-#fit.nlis <- nlsList(yield ~ SSasymp(NF, Asym, R0, lrc), data = barleyG)
-
-fit1 <- nlsList(leach ~ SSplin(nrate, a, xs, b), data = datG)
-summary(fit1) %>% tidy()
-
-## Use this to fit a nonlinear mixed model
-fit.nlme <- nlme(fit.nlis)
-## Investigate residuals
-plot(fit.nlme)
-
-## Look at predictions
-plot(augPred(fit.nlme, level = 0:1))
-
-
 # actual paper example ----------------------------------------------------
 #https://cran.r-project.org/web/packages/nlraa/vignettes/nlraa-AgronJ-paper.html
 library(nlraa)
+library(nlme)
+library(tidyverse)
+
 #--note there are 3 blocks
 sm %>% 
   ggplot(aes(DOY, Yield)) + 
@@ -81,11 +46,29 @@ fit.lis2 <- nlsList(Yield ~ bgf2(DOY, w.max, w.b = 0, t.e, t.m, t.b = 141),
                     start = c(w.max = 30, t.e=280, t.m=240))
 plot(fit.lis2)
 
-#--ok now fit the non-linear mixed model?
+#--ok now fit the non-linear mixed model
+# how does it know what is random? It just assumes everything? How does it know about the eus? From the grouped command?
 fit.me2 <- nlme(fit.lis2)
+fit.me2
 
-#--wait we want to updat the variance-covariance matrix to be simplified (?)
+#--let's try this whole thing using sm2, not the grouped one
+# can't use nlsList if it isn't grouped
+fit.lis2noG <- nls(Yield ~ bgf2(DOY, w.max, w.b = 0, t.e, t.m, t.b = 141),
+                    data = sm2,
+                    start = c(w.max = 30, t.e=280, t.m=240))
+
+fit.me2 <- nlme(fit.lis2noG)
+
+#--wait we want to updat the variance-covariance matrix to be simplified
+# I guess the default is pdSymm. 
+# which is a "general positive-definite matrix"
+# not sure what that means. 
+# a pdDiag has 0s for the covariances, but allows for diff var for each random effect.
+# I'm not sure about the notaiton. Why the ~1?
+
 fit2.me2 <- update(fit.me2, random = pdDiag(w.max + t.e + t.m ~ 1))
+fit2.me2 #--notice there are no correlations for the random effects now
+
 anova(fit.me2, fit2.me2)
 
 #--so we said w.max and t.e and t.m aren't related. I guess. SImpler, converges,so let's role with that. (?)
@@ -94,13 +77,20 @@ anova(fit.me2, fit2.me2)
 fe <- fixef(fit2.me2) ## Some starting values with visual help
 # So we say these things vary by crop ( a fixed effect)
 # we have to give it 6 starting values bc we have a w.max, t.e, and t.m parameter for each crop (3 crops)
+
 fit3.me2 <- update(fit2.me2, fixed = list(w.max + t.e + t.m ~ Crop),
-                  start = c(fe[1], -10, 20, fe[2], -40, 0, fe[3], -40, 0))
+                  start = c(fe[1], -10, 20, #--these are the w.max for each crop 
+                            fe[2], -40, 0, #--the t.e for each crop
+                            fe[3], -40, 0)) #--the t.m for each crop
+
 ## We next include the Input
 fe2 <- fixef(fit3.me2)
 fit4.me2 <- update(fit3.me2, fixed = list(w.max + t.e + t.m
                                ~ Crop + Input),
-                  start = c(fe2[1:3], 0, fe2[4:6], 0, fe2[7:9], 0))
+                  start = c(fe2[1:3], 0, # the w.maxes
+                            fe2[4:6], 0, # the t.e.s
+                            fe2[7:9], 0)) # the t.ms
+
 ## and the interaction
 fe3 <- fixef(fit4.me2)
 fit5.me2 <- update(fit4.me2,
@@ -116,11 +106,14 @@ plot(fit5.me2)
 fit6.me2 <- update(fit5.me2,
                    weights = varPower(form = ~ fitted(.) | Crop))
 
+#--or not.
 fit7.me2 <- update(fit6.me2, weights = varPower(form = ~ fitted(.)))
 
+#--this makes no sense. It's still testing model 1 vs 2, but model 1 and 2 changed.
+anova(fit7.me2, fit6.me2)
 anova(fit6.me2, fit7.me2)
 
-#--model 6 is the winner
+#--model 6 is the winner (?) based on what?
 fit6.me2
 
 # the random effcts are very small compared to the residual. Maybe we don't need them. 
@@ -132,9 +125,12 @@ fit8.me2 <- gnls(Yield ~ bgf2(DOY, w.max, t.e, t.m, w.b=0, t.b=141),
                                                    + Crop:Input),
                  weights = varPower(form = ~ fitted(.) | Crop),
                  start = fixef(fit7.me2))
-anova(fit6.me2, fit8.me2)
 
-#--the model without the random effect is better
+
+anova(fit8.me2, fit6.me2)
+
+anova(fit6.me2, fit8.me2)
+#--the model without the random effect is better (lower AIC/BIC etc)
 anova(fit8.me2)
 
 # this shows that Crop, Input, and thier interaction are sig for all terms except the t.m param
