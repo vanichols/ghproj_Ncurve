@@ -41,6 +41,10 @@ fm1 <- nls(leaching_kgha ~ SSexpf(n_rate, a, c), data = leach)
 fm2 <- nls(leaching_kgha ~ SSblin(n_rate, a, b, xs, c), data = leach)
 fm3 <- nlsLM(leaching_kgha ~ SSexplin(n_rate, cm, rm, tb), data = leach)
 
+## After looking at the data a bit more it is clear that sc is almost
+## linear and cc shows in many cases a 'break-point'. For this reason the 
+## blinear model seems a reasonable one
+
 ## According to this the blin is the better model
 ## But not that different from SSexplin
 anova(fm1, fm2, fm3)
@@ -58,6 +62,8 @@ ggplot(data = leach, aes(x = n_rate, y = leaching_kgha)) +
 
 
 # note: fernando didn't have cropsys in his eu def. keep it 'wrong' so I understand how he is interpreting things
+# FEM: 2020-04-21. I added cropsys here, but one thing I noteice later (it was not obvious at first) is that
+# this is an unbalanced data set, meaning that cc is present in every year but sc is present every other year
 leach1 <- leach %>%
   mutate(eu = paste0(cropsys,"_",site,"_",year)) %>%
   mutate(site = as.factor(site))
@@ -69,27 +75,33 @@ fmL <- nlsList(leaching_kgha ~ SSblin(n_rate, a, b, xs, c), data = leachG)
 
 plot(fmL)
 plot(intervals(fmL))
+## these plots are always VERY informative. plot(fmL) shows the residuals
+## from individually fitting a nonlinear model to each 'experimental unit'
+## the intervals plot shows that 'c' is varying systematically for different 
+## experimental units. 'xs' can be hard to esimate because some units have 
+## very large confidence intervals. 'a' and 'b' are likely to vary according to
+## factors in the 'design' of this experiment
 
 ## The residual variance is mostly ok, but there are some 
 ## significant outliers, not that many though
 
 ## I had to eliminate xs here for this to converge
 fmm <- nlme(fmL, random = pdDiag(a + b + c ~ 1))
-=======
-## Very strong heterogeneous variance and more variability in a than in c
-# a is the value at x = 0, c is exponential rate
-
-# so he lets a be a random factor (?)
-fmm <- nlme(fmL, random = pdDiag(a ~ 1))
-
 
 fmm
+## this model looks fine
+intervals(fmm)
+## the random effect intervals seem to be well constrained
 
 ## Some outliers, mostly from gold
 plot(fmm, id = 0.01)
 
 fxf <- fixef(fmm)
 
+## Incorporating the effect of cropsys is a bit tricky, 
+## We need the parameter estimates from the previous model
+## as starting values and we put zeros for the starting value
+## of the 'treatment effect'
 fmm2 <- update(fmm, fixed = list(a + b + xs + c ~ cropsys),
                start = c(fxf[1], 0, fxf[2], 0, fxf[3], 0, fxf[4], 0))
 
@@ -97,20 +109,35 @@ fmm2 <- update(fmm, fixed = list(a + b + xs + c ~ cropsys),
 ## on b and c, the slopes
 anova(fmm2)
 
+intervals(fmm2)
+## These shows that the parameters are still well constrained
+
 ## This shows some outliers
 ## might need to dig deeper to see
 ## what is going on
 plot(fmm2, id = 0.01)
 
+## Residuals between -2 and 2 are reasonable and for a data set
+## of this size a few ones outside are reasonable. If there is 
+## more information availbale or a plausible hypothesis we
+## could model the residual variance better
+
+png("figs/augPred-fmm2.png", width = 1e3, height = 1e3)
+plot(augPred(fmm2, level = 0:1))
+dev.off()
+
+## The previous plot shows a very good agreement between modeled and observed
+## This is evidence that we should not be too worried about the outliers
+## To make it clear, normally, I am very concerned about outliers and it is important
+## to dig deeper, but in this case I'm using the plot to give me reassurance that this is not
+## a big deal.
 
 ## Testing simulate_nlme
 ## This is for the MEAN function
-if(packageVersion("nlraa") < '0.59') stop("need latest version of nlraa")
+if(packageVersion("nlraa") < '0.61') stop("need latest version of nlraa")
 
 fmm2.sim1 <- simulate_nlme(fmm2, nsim = 100, psim = 1, level = 0)
-=======
-## Trying to account for the increasing variance
-# Is he basing that off of THIS plot? Or the fmm plot?
+
 
 # This has a good explanation of methods to do this:
 # https://www.itl.nist.gov/div898/handbook/pmd/section4/pmd452.htm
