@@ -63,7 +63,7 @@ dat %>%
 # data by year ------------------------------------------------------------
 
 
-raw2 <- read_excel("data/raw/CompiledData2.xlsx") %>% 
+raw2 <- read_excel("data/raw/20200420_apsimdatacomplete.xlsx") %>% 
   rename(site = pub_reference) %>% 
   mutate_if(is.character, tolower) %>% 
   mutate_if(is.character, str_trim)
