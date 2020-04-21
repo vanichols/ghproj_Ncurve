@@ -63,7 +63,7 @@ dat %>%
 # data by year ------------------------------------------------------------
 
 
-raw2 <- read_excel("data/raw/20200420_apsimdatacomplete.xlsx") %>% 
+raw2 <- read_excel("data/raw/20200421_apsimdatacomplete.xlsx") %>% 
   rename(site = pub_reference) %>% 
   mutate_if(is.character, tolower) %>% 
   mutate_if(is.character, str_trim)
@@ -95,6 +95,14 @@ paths <- stringr::str_c(names(plots), ".png")
 
 pwalk(list(paths, plots), ggsave, path = "figs/")
 
+leach %>% 
+  filter(site == "lawlor") %>% 
+  filter(cropsys != "cc") %>% 
+  ggplot(aes(n_rate, leaching_kgha, color = as.factor(year))) + 
+  geom_point(size = 4) + 
+  geom_line(size = 2) + 
+  theme_bw() + 
+  facet_grid(.~cropsys)
 
 # soil data ---------------------------------------------------------------
 
