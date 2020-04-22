@@ -8,7 +8,7 @@
 
 # actual paper example ----------------------------------------------------
 #https://cran.r-project.org/web/packages/nlraa/vignettes/nlraa-AgronJ-paper.html
-remotes::install_github("femiguez/nlraa")
+#remotes::install_github("femiguez/nlraa")
 library(nlraa)
 
 library(nlme)
@@ -21,12 +21,12 @@ library(minpack.lm)
 
 # my data prep ------------------------------------------------------------
 #--my data
-#= Yep, Gentry is certainly weird
+#--note: the data is not...yet clean
+
 leach <- read_csv("data/tidy/td_crop-by-year.csv") %>% 
   select(site, year, cropsys, crop, leaching_kgha, n_rate) %>% 
   arrange(site, year, n_rate) %>% 
   filter(crop == 'corn') %>%
-  filter(site != "gentry") %>%
   mutate(year.f = as.factor(year))
 
 #--now have complete balanced data
@@ -72,7 +72,6 @@ ggplot(data = leach2, aes(x = n_rate, y = leaching_kgha)) +
   ggtitle("Expolinear fit. \n Do we need something more complex?")
 
 
-# note: fernando didn't have cropsys in his eu def. keep it 'wrong' so I understand how he is interpreting things
 # FEM: 2020-04-21. I added cropsys here, but one thing I noteice later (it was not obvious at first) is that
 # this is an unbalanced data set, meaning that cc is present in every year but sc is present every other year
 # GN: this was fixed 2020-04-21, it's now balanced
@@ -95,6 +94,7 @@ library(tibble)
 class(coef(fmL))
 
 #--that's a lot to not converge, eek
+#--is this a sign I've picked a poor model?
 coef(fmL) %>% 
   rownames_to_column() %>% 
   as_tibble() %>% 
@@ -105,8 +105,8 @@ coef(fmL) %>%
 # This doesn't work, I'm not sure why we switch to nlme to relax convergence criteria
 fmL2 <- nlme(fmL, control = list(maxIter = 100, msMaxiter = 300, pnlsMaxIter = 20))
 
-# This doesn't work either. Is it doing the same thing?
-fmL <- nlsList(leaching_kgha ~ SSblin(n_rate, a, b, xs, c), 
+# This doesn't fix anything. Is it doing the same thing as above?
+fmL2 <- nlsList(leaching_kgha ~ SSblin(n_rate, a, b, xs, c), 
                data = leachG, 
                control = list(maxIter = 100, msMaxiter = 300, pnlsMaxIter = 20)) 
 
@@ -144,7 +144,7 @@ fmm
 intervals(fmm)
 ## the random effect intervals seem to be well constrained
 
-## Some outliers, mostly from gold
+## Some outliers, masarik?
 plot(fmm, id = 0.01)
 
 fxf <- fixef(fmm)
@@ -154,7 +154,20 @@ fxf <- fixef(fmm)
 ## as starting values and we put zeros for the starting value
 ## of the 'treatment effect'
 fmm2 <- update(fmm, fixed = list(a + b + xs + c ~ cropsys),
-               start = c(fxf[1], 0, fxf[2], 0, fxf[3], 0, fxf[4], 0))
+               start = c(fxf[1], 0, #--a
+                         fxf[2], 0, #--b
+                         fxf[3], 0, #--xs
+                         fxf[4], 0)) #--c
+
+fxf2 <- fixef(fmm2)
+
+# What if I wanted to include site (there are 10)?
+
+fmm2up <- update(fmm2, fixed = list(a + b + xs + c ~ cropsys + site),
+               start = c(fxf2[1:2], rep(1, 9), #--a
+                         fxf2[3:4], rep(0, 9), #--b
+                         fxf2[5:6], rep(120, 9), #--xs
+                         fxf2[7:8], rep(0, 9))) #--c
 
 
 # Gina trying to reverse engineer formula notation ------------------------
