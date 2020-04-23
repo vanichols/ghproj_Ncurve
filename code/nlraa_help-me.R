@@ -114,7 +114,7 @@ fmL2 <- nlsList(leaching_kgha ~ SSblin(n_rate, a, b, xs, c),
 plot(fmL)
 # GN Is looking at outliers here helpful, even though this isn't our 'full' model?
 plot(fmL, id = 0.01)
-
+coef(fmL)
 plot(intervals(fmL))
 ## these plots are always VERY informative. plot(fmL) shows the residuals
 ## from individually fitting a nonlinear model to each 'experimental unit'
