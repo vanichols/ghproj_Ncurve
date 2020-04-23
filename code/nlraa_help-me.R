@@ -50,6 +50,7 @@ ggplot(data = leach2, aes(x = n_rate, y = leaching_kgha, color = year)) +
 fm1 <- nls(leaching_kgha ~ SSexpf(n_rate, a, c), data = leach2)
 fm2 <- nls(leaching_kgha ~ SSblin(n_rate, a, b, xs, c), data = leach2)
 fm3 <- nlsLM(leaching_kgha ~ SSexplin(n_rate, cm, rm, tb), data = leach2) # what is nlsLM?
+## FEM: nlsLM is a version of nls which is more robust than nls. it is in the minpack.lm package
 
 ## After looking at the data a bit more it is clear that sc is almost
 ## linear and cc shows in many cases a 'break-point'. For this reason the 
@@ -89,6 +90,10 @@ leachG$cropsys <- as.factor(leachG$cropsys)
 fmL <- nlsList(leaching_kgha ~ SSblin(n_rate, a, b, xs, c), data = leachG) 
 #--I get non-convergence errors, I think
 
+plot(intervals(fmL))
+## This plot suggests that we could probably have xs only depend on
+## cropsys, because there is no clear systematic variation
+
 #--which ones doesn't it like?
 library(tibble)
 class(coef(fmL))
@@ -103,17 +108,21 @@ coef(fmL) %>%
   pull()
 
 # This doesn't work, I'm not sure why we switch to nlme to relax convergence criteria
-fmL2 <- nlme(fmL, control = list(maxIter = 100, msMaxiter = 300, pnlsMaxIter = 20))
+# FEM: This converges easily if we simplify the variance-covariance matrix of the 
+# random effects
+fmL2 <- nlme(fmL, random = pdDiag(a + b + c ~ 1))
 
 # This doesn't fix anything. Is it doing the same thing as above?
+# The one below does not fit a NLME model it only fits a NL per 'group' or
+# 'experimental unit'
 fmL2 <- nlsList(leaching_kgha ~ SSblin(n_rate, a, b, xs, c), 
                data = leachG, 
                control = list(maxIter = 100, msMaxiter = 300, pnlsMaxIter = 20)) 
 
 # GN: ignore it I guess. Does it matter? 
-plot(fmL)
+plot(fmL2)
 # GN Is looking at outliers here helpful, even though this isn't our 'full' model?
-plot(fmL, id = 0.01)
+plot(fmL2, id = 0.000001)
 
 plot(intervals(fmL))
 ## these plots are always VERY informative. plot(fmL) shows the residuals
@@ -137,7 +146,7 @@ plot(intervals(fmL))
 # GN - how did you know to eliminate xs. Because it's hard to est, based on the above plots?
 fmm <- nlme(fmL, random = pdDiag(a + b + c ~ 1))
 # GN - So w/o a fixed effect defined, it's fitting a grand model, allowing a b and c to vary for each eu? 
-
+# FEM - yes, the statement above is correct
 
 fmm
 ## this model looks fine
@@ -163,12 +172,13 @@ fxf2 <- fixef(fmm2)
 
 # What if I wanted to include site (there are 10)?
 
+## I'm guessing this does not work well, there are better ways of improving
+## the model...
 fmm2up <- update(fmm2, fixed = list(a + b + xs + c ~ cropsys + site),
                start = c(fxf2[1:2], rep(1, 9), #--a
                          fxf2[3:4], rep(0, 9), #--b
                          fxf2[5:6], rep(120, 9), #--xs
                          fxf2[7:8], rep(0, 9))) #--c
-
 
 # Gina trying to reverse engineer formula notation ------------------------
 
