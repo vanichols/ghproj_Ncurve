@@ -32,7 +32,7 @@ plot(fit.lis)
 
 #--relax the convergence criteria (?)
 fit.me <- nlme(fit.lis, control = list(maxIter = 100, msMaxiter = 300, pnlsMaxIter = 20))
- #### QUESTION. How does it know what I want as random?
+ #### QUESTION. why am I using nlme to relax convergence criteria?
 
 #--look at resids and preds
 plot(fit.me)
