@@ -115,9 +115,9 @@ fmL2 <- nlme(fmL, random = pdDiag(a + b + c ~ 1))
 # This doesn't fix anything. Is it doing the same thing as above?
 # The one below does not fit a NLME model it only fits a NL per 'group' or
 # 'experimental unit'
-fmL2 <- nlsList(leaching_kgha ~ SSblin(n_rate, a, b, xs, c), 
-               data = leachG, 
-               control = list(maxIter = 100, msMaxiter = 300, pnlsMaxIter = 20)) 
+# fmL2 <- nlsList(leaching_kgha ~ SSblin(n_rate, a, b, xs, c), 
+#                data = leachG, 
+#                control = list(maxIter = 100, msMaxiter = 300, pnlsMaxIter = 20)) 
 
 # GN: ignore it I guess. Does it matter? 
 plot(fmL2)
