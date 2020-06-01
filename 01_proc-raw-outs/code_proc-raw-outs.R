@@ -1,17 +1,34 @@
 # author: gina
-# created: 4/13/2020
+# created: 6/1/2020
 # purpose: process heather's data
-# last updated: 4/15/2020 added new files
-#               4/16/2020 used new Compiled2 w/fixed Gentry
-#               4/22/2020 data is still not settled, will continue to update
+# last updated: 
 
 library(readr)
 library(dplyr)
 library(stringr)
 library(janitor)
 library(readxl)
+library(saapsim)
 
-# data by year ------------------------------------------------------------
+# data ------------------------------------------------------------
+
+#--CC
+cc <- 
+  saf_readapout("01_proc-raw-outs/out_files/CC/") %>%
+  filter(file != "raw", file != "outs") %>% 
+  mutate(rotation = "cc")
+
+#--SC -- the crop the data is from is not indicated in the data
+sc <- 
+  saf_readapout("01_proc-raw-outs/out_files/SC/") %>%
+  filter(file != "raw", file != "outs") %>% 
+  mutate(rotation = "sc")
+
+#--CS
+cs <- 
+  saf_readapout("01_proc-raw-outs/out_files/SC/") %>%
+  filter(file != "raw", file != "outs") %>% 
+  mutate(rotation = "cs")
 
 
 raw2 <- read_excel("data/raw/20200421_apsimdatacomplete.xlsx") %>% 
