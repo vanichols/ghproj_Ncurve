@@ -1,14 +1,14 @@
 # author: gina
 # created: 6/1/2020
 # purpose: process heather's data
-# last updated: 
+# last updated: 6/8/2020 (yields weren't crop specific, asked heather to change)
 
-library(readr)
-library(dplyr)
+library(tidyverse)
 library(stringr)
 library(janitor)
 library(readxl)
 library(saapsim)
+library(purrr)
 
 # data ------------------------------------------------------------
 
@@ -18,7 +18,7 @@ cc <-
   filter(file != "raw", file != "outs") %>% 
   mutate(rotation = "cc")
 
-#--SC -- the crop the data is from is not indicated in the data
+#--SC -- the crop the data is from is not indicated in the data - fixed
 sc <- 
   saf_readapout("01_proc-raw-outs/out_files/SC/") %>%
   filter(file != "raw", file != "outs") %>% 
@@ -30,48 +30,101 @@ cs <-
   filter(file != "raw", file != "outs") %>% 
   mutate(rotation = "cs")
 
+dat <- bind_rows(cc, sc, cs) %>% 
+  select(-path)
 
-raw2 <- read_excel("data/raw/20200421_apsimdatacomplete.xlsx") %>% 
-  rename(site = pub_reference) %>% 
+#--need to pull out site, Sutherland and iragblah are notated differently, ask heather to fix
+dat2 <- 
+  dat %>% 
+  separate(file, into = c("site", "rot", "nrate", "other"), sep = "_") %>% 
   mutate_if(is.character, tolower) %>% 
-  mutate_if(is.character, stringr::str_trim) %>% 
-  mutate(site_id = recode(site,
-                       "randall.iragavarapu" = "rair"),
-         site_id = stringr::str_sub(site, 1, 4))
+  mutate_if(is.character, stringr::str_trim) 
+
+#--cs and sc are the same, wrong
+dat2 %>% 
+  select(site, year, rotation, soybean_annual_yield_bu_ac, maize_annual_yield_bu_ac) %>% 
+  filter(site == "gentry") 
+
+
+dat3 <- 
+  dat2 %>% 
+  mutate(site_id = stringr::str_sub(site, 1, 4)) %>% 
+  select(-site, -rot, -nrate, -other) %>% 
+  filter(maize_annual_yield_bu_ac != 0) #--keep only maize data
                        
                        
 # look at it --------------------------------------------------------------
-
 #--use pwalk to make a fig for each site
 
-leach <- raw2 %>% 
-    select(site, year, cropsys, crop, leaching_kgha, n_rate) %>% 
-  arrange(site, year, n_rate) %>% 
-  filter(crop == 'corn')
+
+#--leaching
+
+leach <- 
+  dat3 %>% 
+    select(site_id, year, rotation, annual_tile_nleaching, n_rate) %>% 
+  arrange(site_id, year, n_rate)
+
+
+leach %>%
+  filter(site_id == 'gent') %>% 
+  ggplot(., aes(n_rate, annual_tile_nleaching)) +
+  geom_point(size = 2) +
+  geom_line() +
+  facet_grid(rotation ~ year) +
+  labs(title = "corn") + 
+  theme(axis.text.x = element_text(angle = 90))
 
 plots <-
   leach %>%
-  split(.$site) %>%
+  split(.$site_id) %>%
   map( ~ (
-    ggplot(., aes(n_rate, leaching_kgha)) +
-      geom_point(size = 3) +
-      geom_line(linetype = "dashed") +
-      facet_grid(cropsys ~ year) +
-      labs(title = "corn")
+    ggplot(., aes(n_rate, annual_tile_nleaching)) +
+      geom_point(size = 2) +
+      geom_line() +
+      facet_grid(rotation ~ year) +
+      labs(title = "corn") + 
+      theme(axis.text.x = element_text(angle = 90))
+    
   ))
 
 paths <- stringr::str_c(names(plots), ".png")
 
-pwalk(list(paths, plots), ggsave, path = "figs/")
+pwalk(list(paths, plots), ggsave, path = "01_proc-raw-outs/figs/leach/", width = 10, height = 4)
 
-leach %>% 
-  filter(site == "lawlor") %>% 
-  filter(cropsys != "cc") %>% 
-  ggplot(aes(n_rate, leaching_kgha, color = as.factor(year))) + 
-  geom_point(size = 4) + 
-  geom_line(size = 2) + 
-  theme_bw() + 
-  facet_grid(.~cropsys)
+
+#--yield
+
+yld <- 
+  dat3 %>% 
+  select(site_id, year, rotation, maize_annual_yield_bu_ac, n_rate) %>% 
+  arrange(site_id, year, n_rate)
+
+
+yld %>%
+  filter(site_id == 'gent') %>% 
+  ggplot(., aes(n_rate, maize_annual_yield_bu_ac)) +
+  geom_point(size = 2) +
+  geom_line() +
+  facet_grid(rotation ~ year) +
+  labs(title = "corn") + 
+  theme(axis.text.x = element_text(angle = 90))
+
+plots <-
+  yld %>%
+  split(.$site_id) %>%
+  map( ~ (
+    ggplot(., aes(n_rate, maize_annual_yield_bu_ac)) +
+      geom_point(size = 2) +
+      geom_line() +
+      facet_grid(rotation ~ year) +
+      labs(title = "corn") + 
+      theme(axis.text.x = element_text(angle = 90))
+    
+  ))
+
+paths <- stringr::str_c(names(plots), ".png")
+
+pwalk(list(paths, plots), ggsave, path = "01_proc-raw-outs/figs/ylds/", width = 10, height = 4)
 
 # soil data ---------------------------------------------------------------
 
