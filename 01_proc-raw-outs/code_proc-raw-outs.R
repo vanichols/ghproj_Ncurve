@@ -10,49 +10,57 @@ library(readxl)
 library(saapsim)
 library(purrr)
 
+
+
 # data ------------------------------------------------------------
+# note: read in data directly from box folder, it will change
+
+mydir <- "../../../Box/1_Gina_Projects/proj_Ncurve/Out Files 2020.6.10/"
 
 #--CC
 cc <- 
-  saf_readapout("01_proc-raw-outs/out_files/CC/") %>%
+  saf_readapout(fold_dir = paste0(mydir, "CC Out Files/")) %>%
   filter(file != "raw", file != "outs") %>% 
   mutate(rotation = "cc")
 
-#--SC -- the crop the data is from is not indicated in the data - fixed
+#--SC
 sc <- 
-  saf_readapout("01_proc-raw-outs/out_files/SC/") %>%
+  saf_readapout(fold_dir = paste0(mydir, "SC Out Files/")) %>%
   filter(file != "raw", file != "outs") %>% 
   mutate(rotation = "sc")
 
 #--CS
 cs <- 
-  saf_readapout("01_proc-raw-outs/out_files/SC/") %>%
+  saf_readapout(fold_dir = paste0(mydir, "CS Out Files/")) %>%
   filter(file != "raw", file != "outs") %>% 
   mutate(rotation = "cs")
 
 dat <- bind_rows(cc, sc, cs) %>% 
   select(-path)
 
-#--need to pull out site, Sutherland and iragblah are notated differently, ask heather to fix
+#--pull out site from file name
 dat2 <- 
-  dat %>% 
-  separate(file, into = c("site", "rot", "nrate", "other"), sep = "_") %>% 
+  dat %>%  
+  separate(file, into = c("site", "rot", "nrate"), sep = "_") %>% 
   mutate_if(is.character, tolower) %>% 
   mutate_if(is.character, stringr::str_trim) 
 
-#--cs and sc are the same, wrong
-dat2 %>% 
-  select(site, year, rotation, soybean_annual_yield_bu_ac, maize_annual_yield_bu_ac) %>% 
-  filter(site == "gentry") 
-
-
+#--get only real data (not spin up, not soybean, etc.)
 dat3 <- 
   dat2 %>% 
   mutate(site_id = stringr::str_sub(site, 1, 4)) %>% 
-  select(-site, -rot, -nrate, -other) %>% 
-  filter(maize_annual_yield_bu_ac != 0) #--keep only maize data
-                       
-                       
+  select(-site, -rot, -nrate) %>% 
+  filter(yield_maize_buac != 0) %>% #--keep only maize data
+  #--Heather says spin is 1994-1998. Start in 1999
+  #--based on figs, it should start in 2000, not 1999
+  filter(year >= 2000) %>% 
+  #--remove hoff year 2012
+  filter( ! (year == 2012 & site_id == "hoff"))
+
+
+write_csv(dat3, "01_proc-raw-outs/pro_apdat.csv")
+
+
 # look at it --------------------------------------------------------------
 #--use pwalk to make a fig for each site
 
@@ -61,13 +69,13 @@ dat3 <-
 
 leach <- 
   dat3 %>% 
-    select(site_id, year, rotation, annual_tile_nleaching, n_rate) %>% 
-  arrange(site_id, year, n_rate)
+    select(site_id, year, rotation, leaching_kgha, n_rate_kgha) %>% 
+  arrange(site_id, year, n_rate_kgha)
 
 
 leach %>%
   filter(site_id == 'gent') %>% 
-  ggplot(., aes(n_rate, annual_tile_nleaching)) +
+  ggplot(., aes(n_rate_kgha, leaching_kgha)) +
   geom_point(size = 2) +
   geom_line() +
   facet_grid(rotation ~ year) +
@@ -78,7 +86,7 @@ plots <-
   leach %>%
   split(.$site_id) %>%
   map( ~ (
-    ggplot(., aes(n_rate, annual_tile_nleaching)) +
+    ggplot(., aes(n_rate_kgha, leaching_kgha)) +
       geom_point(size = 2) +
       geom_line() +
       facet_grid(rotation ~ year) +
@@ -96,13 +104,13 @@ pwalk(list(paths, plots), ggsave, path = "01_proc-raw-outs/figs/leach/", width =
 
 yld <- 
   dat3 %>% 
-  select(site_id, year, rotation, maize_annual_yield_bu_ac, n_rate) %>% 
-  arrange(site_id, year, n_rate)
+  select(site_id, year, rotation, yield_maize_buac, n_rate_kgha) %>% 
+  arrange(site_id, year, n_rate_kgha)
 
 
 yld %>%
   filter(site_id == 'gent') %>% 
-  ggplot(., aes(n_rate, maize_annual_yield_bu_ac)) +
+  ggplot(., aes(n_rate_kgha, yield_maize_buac)) +
   geom_point(size = 2) +
   geom_line() +
   facet_grid(rotation ~ year) +
@@ -113,7 +121,7 @@ plots <-
   yld %>%
   split(.$site_id) %>%
   map( ~ (
-    ggplot(., aes(n_rate, maize_annual_yield_bu_ac)) +
+    ggplot(., aes(n_rate_kgha, yield_maize_buac)) +
       geom_point(size = 2) +
       geom_line() +
       facet_grid(rotation ~ year) +
@@ -126,41 +134,45 @@ paths <- stringr::str_c(names(plots), ".png")
 
 pwalk(list(paths, plots), ggsave, path = "01_proc-raw-outs/figs/ylds/", width = 10, height = 4)
 
-# soil data ---------------------------------------------------------------
-
-#--need to think about the metrics we want
-
-soi <- read_csv("data/raw/soilallsites.csv") %>% 
-  rename(site = pub_reference) %>% 
-  mutate_if(is.character, tolower) %>% 
-  mutate_if(is.character, stringr::str_trim) %>% 
-  mutate(site_id = recode(site,
-                          "randall.iragavarapu" = "rair_rand_iragav"),
-         site_id = stringr::str_sub(site_id, 1, 4))
 
 
-#--mean values for 0-60cm
-soi_60cm <- 
-  soi %>% 
-  select(site, site_id, depth_inc, depth_cat, om_pct:pH, -texture) %>%
-  pivot_longer(om_pct:pH) %>% 
-  filter(depth_cat < 7) %>% 
-  group_by(site, site_id, name) %>% 
-  summarise(mn_val = mean(value, na.rm = T))
 
-soi_60cm %>% 
-  ggplot(aes(site_id, mn_val)) + 
-  geom_point() + 
-  facet_wrap(~name, scales = "free") + 
-  coord_flip()
-
-#--lots of stuff is useless
-#--need to do something diff for paw, but ok for now
-
-soi_tidy <- 
-  soi_60cm %>% 
-  filter(name %in% c("BD", "clay_pct", "DUL", "KS", "LL", "om_pct", "PAW", "pH")) %>% 
-  pivot_wider(names_from = name, values_from = mn_val)
-
-
-soi_tidy %>% write_csv("data/tidy/td_soil-60cm.csv")
+# ## OLD
+# # soil data ---------------------------------------------------------------
+# 
+# #--need to think about the metrics we want
+# 
+# soi <- read_csv("data/raw/soilallsites.csv") %>% 
+#   rename(site = pub_reference) %>% 
+#   mutate_if(is.character, tolower) %>% 
+#   mutate_if(is.character, stringr::str_trim) %>% 
+#   mutate(site_id = recode(site,
+#                           "randall.iragavarapu" = "rair_rand_iragav"),
+#          site_id = stringr::str_sub(site_id, 1, 4))
+# 
+# 
+# #--mean values for 0-60cm
+# soi_60cm <- 
+#   soi %>% 
+#   select(site, site_id, depth_inc, depth_cat, om_pct:pH, -texture) %>%
+#   pivot_longer(om_pct:pH) %>% 
+#   filter(depth_cat < 7) %>% 
+#   group_by(site, site_id, name) %>% 
+#   summarise(mn_val = mean(value, na.rm = T))
+# 
+# soi_60cm %>% 
+#   ggplot(aes(site_id, mn_val)) + 
+#   geom_point() + 
+#   facet_wrap(~name, scales = "free") + 
+#   coord_flip()
+# 
+# #--lots of stuff is useless
+# #--need to do something diff for paw, but ok for now
+# 
+# soi_tidy <- 
+#   soi_60cm %>% 
+#   filter(name %in% c("BD", "clay_pct", "DUL", "KS", "LL", "om_pct", "PAW", "pH")) %>% 
+#   pivot_wider(names_from = name, values_from = mn_val)
+# 
+# 
+# soi_tidy %>% write_csv("data/tidy/td_soil-60cm.csv")
