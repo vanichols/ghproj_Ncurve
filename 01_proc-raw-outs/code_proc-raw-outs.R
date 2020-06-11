@@ -38,6 +38,10 @@ cs <-
 dat <- bind_rows(cc, sc, cs) %>% 
   select(-path)
 
+#--so you don't have to read them in every time you want to change something
+write_rds(dat, "01_proc-raw-outs/pro_rawapdat.rds")
+
+
 #--pull out site from file name
 dat2 <- 
   dat %>%  
@@ -55,7 +59,8 @@ dat3 <-
   #--based on figs, it should start in 2000, not 1999
   filter(year >= 2000) %>% 
   #--remove hoff year 2012
-  filter( ! (year == 2012 & site_id == "hoff"))
+  filter( ! (year == 2012 & site_id == "hoff")) %>% 
+  rename(nrate_kgha = n_rate_kgha)
 
 
 write_csv(dat3, "01_proc-raw-outs/pro_apdat.csv")
@@ -69,13 +74,13 @@ write_csv(dat3, "01_proc-raw-outs/pro_apdat.csv")
 
 leach <- 
   dat3 %>% 
-    select(site_id, year, rotation, leaching_kgha, n_rate_kgha) %>% 
-  arrange(site_id, year, n_rate_kgha)
+    select(site_id, year, rotation, leaching_kgha, nrate_kgha) %>% 
+  arrange(site_id, year, nrate_kgha)
 
 
 leach %>%
   filter(site_id == 'gent') %>% 
-  ggplot(., aes(n_rate_kgha, leaching_kgha)) +
+  ggplot(., aes(nrate_kgha, leaching_kgha)) +
   geom_point(size = 2) +
   geom_line() +
   facet_grid(rotation ~ year) +
@@ -86,7 +91,7 @@ plots <-
   leach %>%
   split(.$site_id) %>%
   map( ~ (
-    ggplot(., aes(n_rate_kgha, leaching_kgha)) +
+    ggplot(., aes(nrate_kgha, leaching_kgha)) +
       geom_point(size = 2) +
       geom_line() +
       facet_grid(rotation ~ year) +
@@ -104,13 +109,13 @@ pwalk(list(paths, plots), ggsave, path = "01_proc-raw-outs/figs/leach/", width =
 
 yld <- 
   dat3 %>% 
-  select(site_id, year, rotation, yield_maize_buac, n_rate_kgha) %>% 
-  arrange(site_id, year, n_rate_kgha)
+  select(site_id, year, rotation, yield_maize_buac, nrate_kgha) %>% 
+  arrange(site_id, year, nrate_kgha)
 
 
 yld %>%
   filter(site_id == 'gent') %>% 
-  ggplot(., aes(n_rate_kgha, yield_maize_buac)) +
+  ggplot(., aes(nrate_kgha, yield_maize_buac)) +
   geom_point(size = 2) +
   geom_line() +
   facet_grid(rotation ~ year) +
@@ -121,7 +126,7 @@ plots <-
   yld %>%
   split(.$site_id) %>%
   map( ~ (
-    ggplot(., aes(n_rate_kgha, yield_maize_buac)) +
+    ggplot(., aes(nrate_kgha, yield_maize_buac)) +
       geom_point(size = 2) +
       geom_line() +
       facet_grid(rotation ~ year) +

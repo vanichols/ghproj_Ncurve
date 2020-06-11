@@ -1,4 +1,4 @@
-date,year,annual_rain_mm,inseason_rain_mm,n_rate_kgha,drainage_mm,leaching_kgha,nitrateflow_mg_l,yield_soy_buac,yield_maize_buac,doy,rotation,site_id
+date,year,annual_rain_mm,inseason_rain_mm,nrate_kgha,drainage_mm,leaching_kgha,nitrateflow_mg_l,yield_soy_buac,yield_maize_buac,doy,rotation,site_id
 2000-12-31,2000,918.6,586.3,0,349.881,9.6,2.746,0,96.305,366,cc,gent
 2001-12-31,2001,963.4,635.3,0,556.117,14.7,2.639,0,38.151,365,cc,gent
 2002-12-31,2002,984.5,439.6,0,456.245,9.7,2.117,0,79.715,365,cc,gent
