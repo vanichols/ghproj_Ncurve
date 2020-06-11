@@ -14,33 +14,34 @@ library(purrr)
 
 # data ------------------------------------------------------------
 # note: read in data directly from box folder, it will change
+# 
+# mydir <- "../../../Box/1_Gina_Projects/proj_Ncurve/Out Files 2020.6.10/"
+# 
+# #--CC
+# cc <- 
+#   saf_readapout(fold_dir = paste0(mydir, "CC Out Files/")) %>%
+#   filter(file != "raw", file != "outs") %>% 
+#   mutate(rotation = "cc")
+# 
+# #--SC
+# sc <- 
+#   saf_readapout(fold_dir = paste0(mydir, "SC Out Files/")) %>%
+#   filter(file != "raw", file != "outs") %>% 
+#   mutate(rotation = "sc")
+# 
+# #--CS
+# cs <- 
+#   saf_readapout(fold_dir = paste0(mydir, "CS Out Files/")) %>%
+#   filter(file != "raw", file != "outs") %>% 
+#   mutate(rotation = "cs")
+# 
+# dat <- bind_rows(cc, sc, cs) %>% 
+#   select(-path)
+# 
+# #--so you don't have to read them in every time you want to change something
+# write_rds(dat, "01_proc-raw-outs/pro_rawapdat.rds")
 
-mydir <- "../../../Box/1_Gina_Projects/proj_Ncurve/Out Files 2020.6.10/"
-
-#--CC
-cc <- 
-  saf_readapout(fold_dir = paste0(mydir, "CC Out Files/")) %>%
-  filter(file != "raw", file != "outs") %>% 
-  mutate(rotation = "cc")
-
-#--SC
-sc <- 
-  saf_readapout(fold_dir = paste0(mydir, "SC Out Files/")) %>%
-  filter(file != "raw", file != "outs") %>% 
-  mutate(rotation = "sc")
-
-#--CS
-cs <- 
-  saf_readapout(fold_dir = paste0(mydir, "CS Out Files/")) %>%
-  filter(file != "raw", file != "outs") %>% 
-  mutate(rotation = "cs")
-
-dat <- bind_rows(cc, sc, cs) %>% 
-  select(-path)
-
-#--so you don't have to read them in every time you want to change something
-write_rds(dat, "01_proc-raw-outs/pro_rawapdat.rds")
-
+dat <- read_rds("01_proc-raw-outs/pro_rawapdat.rds")
 
 #--pull out site from file name
 dat2 <- 
@@ -64,6 +65,27 @@ dat3 <-
 
 
 write_csv(dat3, "01_proc-raw-outs/pro_apdat.csv")
+
+
+#--hoffman 2004 only had 96 mm of in-season rain?! but only for cc?
+dat3 %>% 
+  filter(inseason_rain_mm < 250) %>% 
+  select(site_id, rotation, everything())
+
+dat3 %>% 
+  filter(site_id == "hoff", year == 2004, rotation != "cc") %>% 
+  select(site_id, rotation, everything())
+
+#--rand has 1038 of in-season rain, and 1201 of annual rain
+dat3 %>% 
+  filter(inseason_rain_mm > 1000) %>% 
+  select(site_id, everything())
+
+#--gold? has 1038 of in-season rain, and 1201 of annual rain
+dat3 %>%
+  filter(site_id == "gold") %>% 
+  filter(inseason_rain_mm < 300) %>% 
+  select(site_id, rotation, everything())
 
 
 # look at it --------------------------------------------------------------
