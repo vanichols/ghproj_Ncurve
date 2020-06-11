@@ -8,6 +8,7 @@ library(tidyverse)
 library(nlraa)
 library(nlme)
 library(broom)
+library(plotly)
 
 
 
@@ -338,7 +339,30 @@ rawdat %>%
   geom_point() + 
   geom_smooth(method = "lm", se = F)
 
-#--hoffman 2004 only had 96 mm of in-season rain?!
+#--drainage vs inseason or annual rain
+rawdat %>%
+  select(site_id, year, annual_rain_mm, inseason_rain_mm, drainage_mm) %>% 
+  pivot_longer(annual_rain_mm:inseason_rain_mm) %>% 
+  ggplot(aes(value, drainage_mm, group = site_id, color = site_id)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = F) + 
+  facet_grid(.~name, scales = "free")
+
+#--leaching vs inseason or annual rain
+rawdat %>%
+  select(site_id, year, nrate_kgha, annual_rain_mm, inseason_rain_mm, leaching_kgha) %>% 
+  pivot_longer(annual_rain_mm:inseason_rain_mm) %>% 
+  ggplot(aes(value, leaching_kgha, group = site_id, color = site_id)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = F) + 
+  facet_grid(name ~ nrate_kgha, scales = "free")
+
+
+ggplotly(p = ggplot2::last_plot())
+
 rawdat %>% 
-  filter(inseason_rain_mm < 250) %>% 
-  select(site_id, everything())
+  ggplot(aes(annual_rain_mm, inseason_rain_mm, group = site_id, color = site_id)) + 
+  geom_jitter() + 
+  geom_smooth(method = "lm", se = F)
+
+ggplotly(p = ggplot2::last_plot())
