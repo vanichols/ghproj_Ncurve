@@ -125,7 +125,7 @@ dat_parms2 <-
   select(site_id, year, rotation, term:p.value)
 
 #--how many didn't converge?
-# 10, not terrible
+# 11, not terrible
 yield %>% 
   select(site_id, year) %>% 
   distinct() %>% 
@@ -164,7 +164,9 @@ dat_parms %>%
   ggplot(aes(leach, ylds)) + 
   geom_point() + 
   facet_grid(.~rotation) + 
-  geom_smooth(method = "lm", se = F)
+  geom_smooth(method = "lm", se = F) +
+  labs(x = "leaching pivot point",
+       y = "yield pivot point")
 
 
 dat_parms %>% 
@@ -182,8 +184,6 @@ dat_parms %>%
   theme(axis.text.x = element_blank()) +
   labs(title = "Pivot Point")
   
-
-
 
 
 # leave cs and sc separate ------------------------------------------------
@@ -234,7 +234,8 @@ parms_leach %>%
                      ymax = estimate + std.error)) + 
   facet_grid(rotation ~ term, scales = "free") + 
   coord_flip() + 
-  theme(axis.text.y = element_blank()) + 
+  theme(axis.text.y = element_blank(),
+        panel.grid = element_blank()) + 
   labs(title = "Bilinear fit to Leaching vs Nrate") 
 
 
