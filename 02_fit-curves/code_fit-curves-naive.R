@@ -72,9 +72,6 @@ dat_parms <-
     unnest(cols = c(res)) %>% 
     select(site_id, year, rotation, term:p.value)
   
-dat_parms  
-
-
 #--how many didn't converge?
 # 3, not bad
 leach %>% 
@@ -98,6 +95,17 @@ dat_parms %>%
 
 ggsave("02_fit-curves/figs_blin-leach-parms.png")
 
+
+#--I want to look at a in more depth
+dat_parms %>% 
+  filter(term == "a") %>% 
+  ggplot(aes(reorder(site_id, -estimate), estimate)) + 
+  geom_boxplot(aes(fill = rotation)) + 
+  labs(x = NULL,
+       y = "Intercept at 0N",
+       title = "Seems to be two groups for the intercept")
+
+ggsave("02_fit-curves/figs_blin-intcpt-2-groups.png")
 
 # yield -------------------------------------------------------------------
 
@@ -146,6 +154,8 @@ dat_parms2 %>%
   labs(title = "Bilinear fit to Yields vs Nrate")
 
 ggsave("02_fit-curves/figs_blin-yield-parms.png")
+
+
 
 
 #--does the xs from the leaching match the xs from the yield?
