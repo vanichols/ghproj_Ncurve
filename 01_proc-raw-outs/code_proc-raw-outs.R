@@ -2,6 +2,7 @@
 # created: 6/1/2020
 # purpose: process heather's data
 # last updated: 6/8/2020 (yields weren't crop specific, asked heather to change)
+#               6/16/2020 (weather in hoffman cc was wrong)
 
 library(tidyverse)
 library(stringr)
@@ -12,34 +13,34 @@ library(purrr)
 
 
 
-# data ------------------------------------------------------------
-# note: read in data directly from box folder, it will change
-# 
+#data ------------------------------------------------------------
+#note: read in data directly from box folder, it will change
+
 # mydir <- "../../../Box/1_Gina_Projects/proj_Ncurve/Out Files 2020.6.10/"
 # 
 # #--CC
-# cc <- 
+# cc <-
 #   saf_readapout(fold_dir = paste0(mydir, "CC Out Files/")) %>%
-#   filter(file != "raw", file != "outs") %>% 
+#   filter(file != "raw", file != "outs") %>%
 #   mutate(rotation = "cc")
 # 
 # #--SC
-# sc <- 
+# sc <-
 #   saf_readapout(fold_dir = paste0(mydir, "SC Out Files/")) %>%
-#   filter(file != "raw", file != "outs") %>% 
+#   filter(file != "raw", file != "outs") %>%
 #   mutate(rotation = "sc")
 # 
 # #--CS
-# cs <- 
+# cs <-
 #   saf_readapout(fold_dir = paste0(mydir, "CS Out Files/")) %>%
-#   filter(file != "raw", file != "outs") %>% 
+#   filter(file != "raw", file != "outs") %>%
 #   mutate(rotation = "cs")
 # 
-# dat <- bind_rows(cc, sc, cs) %>% 
+# dat <- bind_rows(cc, sc, cs) %>%
 #   select(-path)
-# 
-# #--so you don't have to read them in every time you want to change something
-# write_rds(dat, "01_proc-raw-outs/pro_rawapdat.rds")
+
+#--so you don't have to read them in every time you want to change something
+#write_rds(dat, "01_proc-raw-outs/pro_rawapdat.rds")
 
 dat <- read_rds("01_proc-raw-outs/pro_rawapdat.rds")
 
@@ -68,6 +69,7 @@ write_csv(dat3, "01_proc-raw-outs/pro_apdat.csv")
 
 
 #--hoffman 2004 only had 96 mm of in-season rain?! but only for cc?
+#--addressed
 dat3 %>% 
   filter(inseason_rain_mm < 250) %>% 
   select(site_id, rotation, everything())
@@ -81,7 +83,7 @@ dat3 %>%
   filter(inseason_rain_mm > 1000) %>% 
   select(site_id, everything())
 
-#--gold? has 1038 of in-season rain, and 1201 of annual rain
+#--gold? 
 dat3 %>%
   filter(site_id == "gold") %>% 
   filter(inseason_rain_mm < 300) %>% 
