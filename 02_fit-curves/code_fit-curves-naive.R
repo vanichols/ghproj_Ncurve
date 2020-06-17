@@ -96,17 +96,6 @@ dat_parms %>%
 ggsave("02_fit-curves/figs_blin-leach-parms.png")
 
 
-#--I want to look at a in more depth
-dat_parms %>% 
-  filter(term == "a") %>% 
-  ggplot(aes(reorder(site_id, -estimate), estimate)) + 
-  geom_boxplot(aes(fill = rotation)) + 
-  labs(x = NULL,
-       y = "Intercept at 0N",
-       title = "Seems to be two groups for the intercept")
-
-ggsave("02_fit-curves/figs_blin-intcpt-2-groups.png")
-
 # yield -------------------------------------------------------------------
 
 yield <- 
@@ -338,4 +327,5 @@ parms_leach %>%
   facet_grid(.~ rotation + respvar, scales = "free") + 
   theme(axis.text.x = element_blank()) +
   labs(title = "Pivot Point")
+
 

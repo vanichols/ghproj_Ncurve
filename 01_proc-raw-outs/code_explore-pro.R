@@ -2,6 +2,7 @@
 # created: 6/1/2020
 # purpose: process heather's data
 # last updated: 6/8/2020 (yields weren't crop specific, asked heather to change)
+#               6/17/2020 look at soils data
 
 library(tidyverse)
 library(plotly)
