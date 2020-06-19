@@ -101,7 +101,7 @@ leach1 %>%
   facet_wrap(~eu)
 
 #--this is too much to look at, not sure how to make it digestable
-plot(augPred(fmm2, level = 0:1))
+#plot(augPred(fmm2, level = 0:1))
 
 
 #--could try having the variance increase with higher values
@@ -132,8 +132,9 @@ VarCorr(fmm3a)
 
 tibble(aparam = c("a", "b", "c"),
        site_var = as.numeric(VarCorr(fmm3a)[2:4]),
-       eu_var = as.numeric(VarCorr(fmm3a)[6:8])) %>% 
-  mutate(tot = site_var + eu_var,
+       eu_var = as.numeric(VarCorr(fmm3a)[6:8]),
+       res_var = as.numeric(VarCorr(fmm3a)[9])) %>% 
+  mutate(tot = site_var + eu_var + res_var,#--where should I add the residual?
          pct_site = site_var/tot)
 
 #--can I interpret this as there is more variation explained by site for the parameter a?

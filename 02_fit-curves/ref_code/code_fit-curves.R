@@ -236,7 +236,8 @@ ggplot() +
                             ymin = mxn.s, 
                             ymax = mnn.s, fill = rotation), 
               alpha = 0.5) + 
-  ggtitle("Simualtion at level 0")
+  ggtitle("Simualtion at level 0")+ 
+  facet_grid(.~rotation)
 
 ## What if I try to simualte at level 1?
 fmm2.sim11 <- simulate_nlme(fmm2, nsim = 100, psim = 1, level = 1)
@@ -245,8 +246,6 @@ fmm2.sim11 <- simulate_nlme(fmm2, nsim = 100, psim = 1, level = 1)
 leachG$mn.s11 <- apply(fmm2.sim11, 1, mean)
 leachG$mxn.s11 <- apply(fmm2.sim11, 1, max)
 leachG$mnn.s11 <- apply(fmm2.sim11, 1, min)
-
-
 
 fmm3 <- update(fmm2, random = list(site_id = pdDiag(a + b + c ~ 1),
                                    eu = pdDiag(a + b + c ~ 1)),
