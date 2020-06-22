@@ -21,33 +21,41 @@ daparms %>%
 ggsave("02_fit-curves/figs_blin-intcpt-2-groups.png")
 
 
-#--note, soils data has lawlor, asking heather to remake it
-dasoil <- read_csv("01_proc-raw-outs/pro_soils.csv")
-
-#--get averages of top 60 cm in soil
-dasoil60 <- 
-  dasoil %>% 
-  select(-texture, -paw) %>%
-  pivot_longer(om_pct:p_h) %>% 
-  filter(depth_cat < 7) %>% 
-  group_by(site_id, name) %>% 
-  summarise(mn_val = mean(value, na.rm = T))
-
-p_soil<- 
-  dasoil60 %>% 
-  ggplot(aes(site_id, mn_val)) + 
-  geom_point() + 
-  geom_segment(aes(y = 0, yend = mn_val, x = site_id, xend = site_id)) +
-  facet_wrap(~name, scales = "free") + 
-  coord_flip()
+dasoil <- read_csv("01_proc-raw-outs/pro_soils-60cm.csv")
 
 
-p_aparm <- 
-  daparms %>% 
-  left_join(dasoil60) %>% 
+daparms %>%  
   filter(term == "a") %>% 
-  ggplot(aes(reorder(site_id, -estimate), estimate)) + 
-  geom_boxplot(aes(fill = rotation))
+  group_by(site_id, rotation) %>% 
+  summarise(meanA = mean(estimate)) %>% 
+  left_join(dasoil %>% 
+              pivot_longer(bd:paw_mm)
+  ) %>%
+  ggplot(aes(value, meanA)) + 
+  geom_point() +
+  geom_smooth(method = "lm", se = F) +
+  facet_grid(rotation ~ name, scales = "free") + 
+  labs(title = "Ksat most strongly related to intercept value")
 
-library(patchwork)
-p_soil + p_aparm
+
+
+daparms %>%  
+  filter(term == "a") %>% 
+  group_by(site_id, rotation) %>% 
+  summarise(meanA = mean(estimate)) %>% 
+  left_join(dasoil %>% 
+              pivot_longer(bd:paw_mm)
+  ) %>%
+  filter(name == "ks") %>% 
+  ggplot(aes(value, meanA)) + 
+  geom_point(aes(color = site_id), size = 4) +
+  geom_smooth(method = "lm", se = F) +
+  facet_grid(. ~ rotation, scales = "free") + 
+  labs(title = "Ksat most strongly related to intercept value\n
+       but remember soil is confounded with mgmt")
+
+
+# for ex gentry was chisel plowed and gold was modlboard, etc. 
+# lots of things were different besides ksat
+read_csv("01_proc-raw-outs/pro_site-info.csv") %>% 
+  filter(site_id %in% c("gold", "gent"))

@@ -70,6 +70,73 @@ rawdat %>%
   geom_smooth(method = "lm", se = F) + 
   facet_grid(name ~ nrate_kgha, scales = "free")
 
+#--how much do these curves vary within a site
+
+rawdat %>% 
+  ggplot(aes(nrate_kgha, leaching_kgha)) + 
+  geom_line(aes(color = as.factor(year)) ) + 
+  facet_grid(rotation~site_id) + 
+  labs(title = "Even with the variance of years, site provides info?")
+
+#--do some sites just get more rain?
+
+rawdat %>% 
+  select(site_id, annual_rain_mm, year) %>% 
+  distinct() %>% 
+  ggplot(aes(reorder(site_id, -annual_rain_mm), annual_rain_mm)) + 
+  geom_jitter(aes(color = site_id), width = 0.2) +
+  stat_summary(fun.data = "mean_cl_boot")
+
+#--create an order
+rain_rank <- 
+  rawdat %>% 
+  select(site_id, annual_rain_mm, year) %>% 
+  distinct() %>% 
+  group_by(site_id) %>% 
+  summarise(mn = mean(annual_rain_mm)) %>% 
+  arrange(-mn) %>% 
+  pull(site_id)
+  
+#--is the intercept related to rain amount? No. 
+rawdat %>% 
+  filter(nrate_kgha == 0) %>% 
+  mutate(site_id = factor(site_id, levels = rain_rank)) %>% 
+  ggplot(aes(as.factor(nrate_kgha), leaching_kgha)) + 
+  geom_point() + 
+  facet_grid(rotation~site_id) + 
+  labs(title = "Rain rank doesn't affect intercept value")
+
+
+#--clay amount? No. 
+
+soi <- read_csv("01_proc-raw-outs/pro_soils-60cm.csv")
+clay_rank <- 
+  soi %>% 
+  arrange(-clay_pct) %>% 
+  pull(site_id)
+
+rawdat %>% 
+  filter(nrate_kgha == 0) %>% 
+  mutate(site_id = factor(site_id, levels = clay_rank)) %>% 
+  ggplot(aes(as.factor(nrate_kgha), leaching_kgha)) + 
+  geom_point() + 
+  facet_grid(rotation~site_id) + 
+  labs(title = "Clay % doesn't affect intercept value")
+
+#--paw? No. 
+
+rawdat %>% 
+  filter(nrate_kgha == 0) %>% 
+  mutate(site_id = factor(site_id, 
+                          levels =
+                            soi %>%
+                            arrange(-paw_mm) %>%
+                            pull(site_id))
+         ) %>% 
+  ggplot(aes(as.factor(nrate_kgha), leaching_kgha)) + 
+  geom_point() + 
+  facet_grid(rotation~site_id) + 
+  labs(title = "PAW doesn't affect intercept value")
 
 # #--something definitely wrong w/hoff
 # rawdat %>% 

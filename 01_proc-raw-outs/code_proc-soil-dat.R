@@ -1,7 +1,7 @@
 # author: gina
 # created: 6/17/2020
 # purpose: process heather's data
-# last updated: 
+# last updated: 6/22/2020 use new data, proc site info as well
 
 library(tidyverse)
 library(stringr)
@@ -10,6 +10,25 @@ library(readxl)
 library(saapsim)
 library(purrr)
 
+
+
+# also process site data --------------------------------------------------
+
+
+asite <- 
+  read_csv("../../../Box/1_Gina_Projects/proj_Ncurve/20200618_apsimdata.csv") %>% 
+  rename(site_id = site) %>% 
+  mutate_if(is.character, tolower) %>% 
+  mutate_if(is.character, stringr::str_trim) %>% 
+  mutate(site_id = stringr::str_sub(site_id, 1, 4)) %>% 
+  mutate_if(is.numeric, round, 0) %>% 
+  janitor::clean_names() %>% 
+  select(-(year:crop_p_dom), -cropsys) %>% 
+  distinct()
+
+asite
+
+write_csv(asite, "01_proc-raw-outs/pro_site-info.csv")
 
 
 #data ------------------------------------------------------------
