@@ -59,11 +59,13 @@ fm2 <- nls(leaching_kgha ~ SSblin(nrate_kgha, a, b, xs, c), data = leach)
 fm3 <- nlsLM(leaching_kgha ~ SSexplin(nrate_kgha, cm, rm, tb), data = leach)
 
 anova(fm1, fm2, fm3)
-anova(fm2, fm3)
+anova(fm2, fm3) #--is using anova on nls objects ok? they aren't nested models...
+
+
+AIC(fm1, fm2, fm3) #--binlinear has lowest aic
 
 ## while the explin actually 'fits' better, the residuals show it is a bad model for this data.
 ## blin is the winner, as it also makes more biological sense 
-
 
 # bilinear fit ------------------------------------------------------------
 
@@ -76,7 +78,8 @@ leachG <- groupedData(leaching_kgha ~ nrate_kgha | eu, data = leach1)
 leachG$rotation <- as.factor(leachG$rotation)
 
 #--fit model to each group
-fmG <- nlsList(leaching_kgha ~ SSblin(nrate_kgha, a, b, xs, c), data = leachG) #--non-converg doesn't matter
+fmG <- nlsList(leaching_kgha ~ SSblin(nrate_kgha, a, b, xs, c), data = leachG) #--non-converg doesn't 
+#matter
 plot(intervals(fmG))
 
 #--a, b, and c could have random components added
@@ -109,12 +112,22 @@ plot(fmm2, id = 0.01, main="no variance modelling")
 
 #--instead of modelling the variance, try adding two random effect levels
 # I don't quite get this code notation, someone wrote it for me 
-fmm3a <- update(fmm2, random = list(site_id = pdDiag(a + b + c ~ 1),
+
+fmm3a <- update(fmm2, 
+                random = list(site_id = pdDiag(a + b + c ~ 1),
                                    eu = pdDiag(a + b + c ~ 1)),
                groups = ~ site_id/eu)
 
 ## Fewer outliers, this is a better model
 plot(fmm3a, id = 0.001)
+
+
+
+#--doesn't work (?)
+fmm3b <- update(fmm2, 
+                random = list(site_id = pdDiag(a + b ~ 1),
+                              eu = pdDiag(a +b ~ 1)),
+                groups = ~ site_id/eu)
 
 
 # explore model -----------------------------------------------------------
@@ -142,12 +155,24 @@ tibble(aparam = c("a", "b", "c"),
 #--leaching increases with increasing rain amount. 
 #--I'd like to correct for that. 
 
+#--plot the residual against the rainfall
+# 
+
+raincentered <- 
+  rawdat %>% 
+  select(site_id, annual_rain_mm, year) %>% 
+  distinct() %>% 
+  group_by(site_id) %>% 
+  mutate(cannual_rain_mm = scale(annual_rain_mm, center = T))
+
+#--maybe variance is getting larger?
+# but after removing the effect of the site, the rainfall doesn't matter much
 dat %>% 
-  ggplot(aes(annual_rain_mm, leaching_kgha, color = site_id)) + 
-  geom_point() + 
-  geom_smooth(method = "lm", se = F) +
-  facet_wrap(~nrate_kgha, scales = "free") + 
-  labs(title = "Leaching inc. with more annual rain at every Nrate")
+  left_join(raincentered) %>% 
+  mutate(resid = resid(fmm3a)) %>% #--use standardized resid instead 
+  ggplot(aes(cannual_rain_mm, resid)) + 
+  geom_point(aes(color = site_id)) +
+  geom_smooth(method = "lm", se = F, aes(color = site_id))
 
 # how do I include a covariate in a non-linear model? I think only b and c parms would be affected. 
 

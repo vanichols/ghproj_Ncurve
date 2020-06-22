@@ -106,6 +106,24 @@ rawdat %>%
   facet_grid(rotation~site_id) + 
   labs(title = "Rain rank doesn't affect intercept value")
 
+#--this relationship isn't strong
+rawdat %>% 
+  ggplot(aes(annual_rain_mm, leaching_kgha)) + 
+  geom_point(aes(color = site_id)) + 
+  geom_smooth(aes(color = site_id), method = "lm", se = F) + 
+  facet_grid(.~rotation)
+
+#--try centering the rainfall
+#--it had similar amounts of variation, that's good!
+rawdat %>% 
+  select(site_id, annual_rain_mm, year) %>% 
+  distinct() %>% 
+  group_by(site_id) %>% 
+  mutate(cannual_rain_mm = scale(annual_rain_mm, center = T)) %>% 
+  ggplot(aes(reorder(site_id, -cannual_rain_mm), cannual_rain_mm)) + 
+  geom_jitter(aes(color = site_id), width = 0.2) +
+  stat_summary(fun.data = "mean_cl_boot")
+
 
 #--clay amount? No. 
 
