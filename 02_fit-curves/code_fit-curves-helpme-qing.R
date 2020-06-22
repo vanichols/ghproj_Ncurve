@@ -151,7 +151,10 @@ dat %>%
 
 # how do I include a covariate in a non-linear model? I think only b and c parms would be affected. 
 
+# The other thing is that is site is important, I'd want to explore what 
+# ABOUT a site is important. 
 
+# I think the ksat of the soil is important in determining a parm (intercept). ksat is a continuous variable, is there a way to test this hypothesis? I took the fitted parms from each eu, looked at the relationship between the intercept and ksat, and it has a positive correlation. This seems inelegant and probably wrong though. 
 
 
 # model exploration -------------------------------------------------------
