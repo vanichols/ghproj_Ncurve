@@ -44,6 +44,24 @@ asoil %>%
   facet_wrap(~name, scales = "free") + 
   coord_flip()
 
+#--write the 60cm stuff
+asoil60 <- 
+  asoil %>% 
+  select(site_id:clay_pct, bd, ll, dul, sat, ks) %>%
+  pivot_longer(om_pct:ks) %>% 
+  filter(depth_cat < 7) %>% 
+  group_by(site_id, name) %>% 
+  summarise(mn_val = mean(value, na.rm = T)) %>% 
+  pivot_wider(names_from = name, values_from = mn_val) %>% 
+  left_join(
+    asoil %>% 
+  select(site_id:depth_cat, paw) %>%
+  filter(depth_cat < 7) %>% 
+  group_by(site_id) %>% 
+  summarise(paw_mm = sum(paw))
+  ) 
+
+asoil60 %>% write_csv("01_proc-raw-outs/pro_soils-60cm.csv")
 
 #--lots of stuff is useless
 #--need to do something diff for paw, but ok for now
