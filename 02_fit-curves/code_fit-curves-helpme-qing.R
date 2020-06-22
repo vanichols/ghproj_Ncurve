@@ -1,11 +1,7 @@
 # author: gina
-# created; 4/10/2020
-# purpose: work through FEM example w/my data
-# last updated: 4/16/2020
-#               4/17/2020 follow FEM new personalized example
-#               4/20/2020 new following w/updated data
-#               6/11/2020 new data again
-#               6/16/2020 cleaned up, trying to distill my questions
+# created; 6/22/2020
+# purpose: get help from qing
+# last updated: 
 
 
 # libraries ---------------------------------------------------------------
@@ -21,6 +17,20 @@ library(car) #--overwrites recode in dplyr
 library(minpack.lm)
 
 
+
+# overview ----------------------------------------------------------------
+
+# The 'experiment' is measuring nitrate leaching at several nitrogen fertilization rates in 
+#  corn grown in 2 rotations (corn-corn, corn-soybean)
+# The experiment was done at 9 sites.
+# At each site it was done for 19 years.
+# Years are essentially the 'replicates'
+
+
+# I am interested in the nitrate leaching vs nitrogen fertilization rate curve
+# I want to know how important the 'site' is and 'rotation' in determining the params of the curve
+
+
 # data prep ------------------------------------------------------------
 
 dat <- 
@@ -29,13 +39,14 @@ dat <-
   mutate(yearF = as.factor(year),
          rotation = dplyr::recode(rotation,
                                  "sc" = "cs"))
-leach <- dat %>% 
-  select(site_id, year, rotation, leaching_kgha, nrate_kgha) 
-  
 
-ggplot(data = leach, aes(x = nrate_kgha, y = leaching_kgha, color = yearF)) + 
+leach <- dat %>% 
+  select(site_id, year, yearF, rotation, leaching_kgha, nrate_kgha) 
+  
+#--a glimpse of the data
+ggplot(data = leach, aes(x = nrate_kgha, y = leaching_kgha)) + 
   facet_wrap(~ rotation) + 
-  geom_point()
+  geom_jitter()
 
 ## Here an important decision is what nonlinear model to use
 ## Possible options are:
@@ -51,7 +62,7 @@ anova(fm1, fm2, fm3)
 anova(fm2, fm3)
 
 ## while the explin actually 'fits' better, the residuals show it is a bad model for this data.
-## blin is the winner. 
+## blin is the winner, as it also makes more biological sense 
 
 
 # bilinear fit ------------------------------------------------------------
@@ -74,12 +85,9 @@ plot(fmm1)
 plot(fmm1, id = 0.000001) #--fernando likes things to be under 2
 plot(fmm1, id = 0.01) #--eek. 
 
-head(coef(fmm1)) #--notice xs is the same for everything
-intervals(fmm1) #--random effect intervals are reasonable
 
-fxf1 <- fixef(fmm1) #--we need these if we want to add an effect of rotation
-
-#--note this an update, it keeps the random effects, we are just adding a fixed effect
+#--add fixed effect of rotation
+fxf1 <- fixef(fmm1) 
 fmm2 <- update(fmm1, 
                fixed = list(a + b + xs + c ~ rotation),
                start = c(fxf1[1], 0, #--a
@@ -89,34 +97,18 @@ fmm2 <- update(fmm1,
 
 fxf2 <- fixef(fmm2) #--now we have a value for cc and cs
 
-anova(fmm2) #--everything is not 0. not that informative
-intervals(fmm2) #--still well constrained estimates
-plot(fmm2, id = 0.01) #--outliers mean maybe we could model the residual variance better. Don't know how to do that.
-
-#--take a look at a few outliers
-leach1 %>% 
-  mutate(pred = predict(fmm2)) %>% 
-  filter(eu %in% c("hugg_2010cc", "hoff_2014cc", "rand_2010cc")) %>% 
-  ggplot(aes(nrate_kgha, leaching_kgha)) + 
-  geom_line(aes(nrate_kgha, pred), color = "red") + 
-  geom_point() + 
-  facet_wrap(~eu)
-
-#--this is too much to look at, not sure how to make it digestable
-#plot(augPred(fmm2, level = 0:1))
-
 
 #--could try having the variance increase with higher values
 fmm3 <- update(fmm2, weights = varPower())
 plot(fmm3, id = 0.01)
 
-#--compare them ?not working grr
+#--compare them, this code is not working
 par(mfrow=c(2,1))
 plot(fmm3, id = 0.01, main="varPower")
 plot(fmm2, id = 0.01, main="no variance modelling")
 
-#--FEM does something I don't quite get. 
-# instead of modelling the variance, try adding two random effect levels?
+#--instead of modelling the variance, try adding two random effect levels
+# I don't quite get this code notation, someone wrote it for me 
 fmm3a <- update(fmm2, random = list(site_id = pdDiag(a + b + c ~ 1),
                                    eu = pdDiag(a + b + c ~ 1)),
                groups = ~ site_id/eu)
@@ -124,22 +116,46 @@ fmm3a <- update(fmm2, random = list(site_id = pdDiag(a + b + c ~ 1),
 ## Fewer outliers, this is a better model
 plot(fmm3a, id = 0.001)
 
-intervals(fmm3a) 
-#--I feel like these are telling me something about between site variation and w/in site var.
-#--It seems that site is absorbing more variance than the eu for a?
-ranef(fmm3a)
 
-# --interclass correlation
+# explore model -----------------------------------------------------------
+
+#--what is this telling me?
+intervals(fmm3a) 
+
+#--interclass correlation
 VarCorr(fmm3a)
 
+#--I'm not sure the proper way to calcuate this
 tibble(aparam = c("a", "b", "c"),
        site_var = as.numeric(VarCorr(fmm3a)[2:4]),
        eu_var = as.numeric(VarCorr(fmm3a)[6:8]),
        res_var = as.numeric(VarCorr(fmm3a)[9])) %>% 
   mutate(tot = site_var + eu_var + res_var,#--where should I add the residual?
-         pct_site = site_var/tot)
+         pct_site = site_var/tot,
+         pct_eu = eu_var/tot)
 
-#--can I interpret this as there is more variation explained by site for the parameter a?
+#--can I interpret this as site is a very important consideration for the parameter a?
+
+
+# what about covariates in non-linear models? -----------------------------
+
+#--leaching increases with increasing rain amount. 
+#--I'd like to correct for that. 
+
+dat %>% 
+  ggplot(aes(annual_rain_mm, leaching_kgha, color = site_id)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = F) +
+  facet_wrap(~nrate_kgha, scales = "free") + 
+  labs(title = "Leaching inc. with more annual rain at every Nrate")
+
+# how do I include a covariate in a non-linear model? I think only b and c parms would be affected. 
+
+
+
+
+# model exploration -------------------------------------------------------
+
 
 ## Parameter values and contrast among groups
 emmeans(fmm3a, ~ rotation, param = "a")
