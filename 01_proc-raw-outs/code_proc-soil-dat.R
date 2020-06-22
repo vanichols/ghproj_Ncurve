@@ -20,13 +20,15 @@ sites <- read_csv("01_proc-raw-outs/pro_apdat.csv") %>%
 sites
 
 
-asoil <- read_csv("../../../Box/1_Gina_Projects/proj_Ncurve/20200522_apsimsoil.csv") %>% 
-  rename(site_id = pub_reference) %>% 
+asoil <- read_csv("../../../Box/1_Gina_Projects/proj_Ncurve/20200618_apsimsoil.csv") %>% 
+  rename(site_id = site) %>% 
   mutate_if(is.character, tolower) %>% 
   mutate_if(is.character, stringr::str_trim) %>% 
   mutate(site_id = stringr::str_sub(site_id, 1, 4)) %>% 
   select(site_id, depth_inc:pH) %>% 
   janitor::clean_names()
+
+asoil %>% select(site_id) %>% distinct()
 
 write_csv(asoil, "01_proc-raw-outs/pro_soils.csv")
 
