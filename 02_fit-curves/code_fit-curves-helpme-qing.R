@@ -165,6 +165,14 @@ raincentered <-
   group_by(site_id) %>% 
   mutate(cannual_rain_mm = scale(annual_rain_mm, center = T))
 
+drainagecentered <- 
+  rawdat %>% 
+  select(site_id, drainage_mm, year) %>% 
+  distinct() %>% 
+  group_by(site_id) %>% 
+  mutate(cdrainage_mm = scale(drainage_mm, center = T))
+
+
 #--maybe variance is getting larger?
 # but after removing the effect of the site, the rainfall doesn't matter much
 dat %>% 
@@ -173,6 +181,16 @@ dat %>%
   ggplot(aes(cannual_rain_mm, resid)) + 
   geom_point(aes(color = site_id)) +
   geom_smooth(method = "lm", se = F, aes(color = site_id))
+
+#--maybe variance is getting larger?
+# but after removing the effect of the site, the rainfall doesn't matter much
+dat %>% 
+  left_join(drainagecentered) %>% 
+  mutate(resid = resid(fmm3a)) %>% #--use standardized resid instead 
+  ggplot(aes(cdrainage_mm, resid)) + 
+  geom_point(aes(color = site_id)) +
+  geom_smooth(method = "lm", se = F, aes(color = site_id))
+
 
 # how do I include a covariate in a non-linear model? I think only b and c parms would be affected. 
 

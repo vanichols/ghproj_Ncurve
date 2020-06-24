@@ -154,6 +154,32 @@ contrast(emmeans(fmm3a, ~ rotation, param = "b"), "pairwise")
 contrast(emmeans(fmm3a, ~ rotation, param = "xs"), "pairwise")
 contrast(emmeans(fmm3a, ~ rotation, param = "c"), "pairwise")
 
-# Question:
 
-leach
+# look at preds -----------------------------------------------------------
+
+leachG$prds <- predict(fmm3a, level = 0)
+
+ggplot(data = leachG, aes(x = nrate_kgha, y = prds)) + 
+  geom_line(aes(color = rotation), size = 3)
+
+
+
+fmm2.sim1 <- simulate_nlme(fmm3a, nsim = 100, psim = 1, level = 0)
+leachG$mn.s <- apply(fmm2.sim1, 1, mean)
+leachG$mxn.s <- apply(fmm2.sim1, 1, max)
+leachG$mnn.s <- apply(fmm2.sim1, 1, min)
+
+
+ggplot() + 
+#  geom_point(data = leachG, aes(x = nrate_kgha, y = leaching_kgha)) + 
+  geom_ribbon(data = leachG, 
+              mapping = aes(x = nrate_kgha, 
+                            ymin = mxn.s, 
+                            ymax = mnn.s, fill = rotation), 
+              alpha = 0.5) + 
+  geom_line(data = leachG, aes(x = nrate_kgha, 
+                               y = prds, 
+                               color = rotation), size = 2) +
+  labs(y = "leaching_kgha")
+
+

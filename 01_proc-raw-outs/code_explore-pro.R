@@ -12,6 +12,10 @@ rawdat <- read_csv("01_proc-raw-outs/pro_apdat.csv") %>%
   mutate(rotation2 = ifelse(rotation == "sc", "cs", rotation))
 
 
+
+# start exploring ---------------------------------------------------------
+
+
 rawdat %>% 
   ggplot(aes(annual_rain_mm, drainage_mm, group = site_id, color = site_id)) + 
   geom_point() + 
@@ -26,7 +30,7 @@ rawdat %>%
 #--% of inseason rain that leaves as drainage
 rawdat %>% 
   mutate(pct_drain = drainage_mm/annual_rain_mm) %>% 
-  ggplot(aes(site_id, pct_drain)) + 
+  ggplot(aes(reorder(site_id, -pct_drain), pct_drain)) + 
   geom_boxplot(aes(fill = rotation2)) + 
   labs(x = NULL,
        y = "Percentage of Annual Rain\nLeaving as Drainage",
@@ -84,8 +88,18 @@ rawdat %>%
   select(site_id, annual_rain_mm, year) %>% 
   distinct() %>% 
   ggplot(aes(reorder(site_id, -annual_rain_mm), annual_rain_mm)) + 
+  geom_jitter(aes(color = site_id), width = 0.2, size = 3, alpha = 0.5) +
+  stat_summary(fun.data = "mean_cl_boot", size = 1) + 
+  labs(x = NULL,
+       title = "Some sites just have more rain")
+
+rawdat %>% 
+  ggplot(aes(reorder(site_id, -leaching_kgha), leaching_kgha)) + 
   geom_jitter(aes(color = site_id), width = 0.2) +
-  stat_summary(fun.data = "mean_cl_boot")
+  stat_summary(fun.data = "mean_cl_boot") + 
+  labs(x = NULL,
+       title = "Some sites just have less leaching")
+
 
 #--create an order
 rain_rank <- 
@@ -124,10 +138,22 @@ rawdat %>%
   geom_jitter(aes(color = site_id), width = 0.2) +
   stat_summary(fun.data = "mean_cl_boot")
 
+#--what do the soils data look like?
+
+soi <- read_csv("01_proc-raw-outs/pro_soils-60cm.csv")
+
+soi %>% 
+  pivot_longer(bd:paw_mm) %>% 
+  ggplot(aes(site_id, value)) + 
+  geom_segment(aes(x = site_id, xend = site_id, y = 0, yend = value,
+                   color = site_id == "klad")) + 
+  geom_point(aes(color = site_id == "klad")) + 
+  facet_wrap(~name, scales = "free") + 
+  coord_flip()
+
 
 #--clay amount? No. 
 
-soi <- read_csv("01_proc-raw-outs/pro_soils-60cm.csv")
 clay_rank <- 
   soi %>% 
   arrange(-clay_pct) %>% 
@@ -157,9 +183,35 @@ rawdat %>%
   labs(title = "PAW doesn't affect intercept value")
 
 # #--something definitely wrong w/hoff
-# rawdat %>% 
-#   ggplot(aes(annual_rain_mm, inseason_rain_mm, group = site_id, color = site_id)) + 
-#   geom_jitter() + 
-#   geom_smooth(method = "lm", se = F)
+rawdat %>%
+  ggplot(aes(annual_rain_mm, inseason_rain_mm, group = site_id, color = site_id)) +
+  geom_jitter() +
+  geom_smooth(method = "lm", se = F)
+
+
+#--leahing vs yield
+
+rawdat %>% 
+  ggplot(aes(yield_maize_buac, leaching_kgha)) + 
+  geom_point() + 
+  facet_wrap(~nrate_kgha)
+
+rawdat %>% 
+  ggplot(aes(leaching_kgha, yield_maize_buac)) + 
+  geom_point() + 
+  facet_wrap(~nrate_kgha)
+
+library(ggbeeswarm)
+
+rawdat %>% 
+  ggplot(aes(nrate_kgha, leaching_kgha)) + 
+  geom_beeswarm(aes(color = rotation)) +
+  coord_flip()
+
+
+rawdat %>% 
+  ggplot(aes(yield_maize_buac, leaching_kgha)) + 
+  geom_point(alpha = 0.5, aes(fill = (nrate_kgha)), pch = 21, size = 3) + 
+  scale_fill_viridis_c() 
 
 ggplotly(p = ggplot2::last_plot())
