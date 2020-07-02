@@ -26,6 +26,11 @@ dat <-
          rotation = as.factor(rotation))
 
 
+dat %>% 
+  select(eu) %>% 
+  distinct() %>% 
+  tally()
+
 # leach -------------------------------------------------------------------
 
 leach <- 

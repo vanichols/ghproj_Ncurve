@@ -225,3 +225,21 @@ rawdat %>%
   facet_grid(.~rotation2)
 
 #--I guess do the same thing as w/the leaching
+
+
+# yield scaled leaching ---------------------------------------------------
+
+rawdat %>% 
+  mutate(yld_scaled = yield_maize_buac/leaching_kgha,
+         leach_scaled = leaching_kgha/yield_maize_buac) %>% 
+  ggplot(aes(nrate_kgha, yld_scaled)) + 
+  geom_line(aes(group = interaction(site_id, year), color= site_id)) + 
+  facet_grid(.~rotation2, scales = "free")
+
+
+rawdat %>% 
+  mutate(yld_scaled = yield_maize_buac/leaching_kgha,
+         leach_scaled = leaching_kgha/yield_maize_buac) %>% 
+  ggplot(aes(nrate_kgha, leach_scaled)) + 
+  geom_line(aes(group = interaction(site_id, year), color= site_id)) + 
+  facet_grid(.~rotation2, scales = "free")
