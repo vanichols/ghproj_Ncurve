@@ -28,6 +28,21 @@ ggsave("02_fit-curves/figs_blin-intcpt-2-groups.png")
 dasoil <- read_csv("01_proc-raw-outs/pro_soils-60cm.csv")
 
 
+#--avg ksat 150-390 cm
+#--sotiris aridity
+#--heather german thing
+#--the 0-60cm is fine
+#--do a 60-150cm
+#--do the same thing for subsoil >150
+#--add drainable porosity (heather added it), units are mm/mm, sum
+#-----this is just sat-dul
+#--paw is dul-ll (not considered when designing drainage things)
+#--make sure I did a weighted average!
+
+#--within a site, is weather/weatherxsoil or soil driving more variation
+#---think about just the intercept
+
+
 leach_prms %>%  
   filter(term == "a") %>% 
   group_by(site_id, rotation) %>% 
@@ -92,6 +107,22 @@ yld_xs %>%
   labs(title = "Leaching pivot point vs yld pivot point")
 
 ggsave("02_fit-curves/figs_leach-xs-vs-yld-xs.png")
+
+yld_xs %>% 
+#  filter(rotation != "cs") %>% 
+  left_join(leach_xs) %>%
+  # group_by(site_id, rotation) %>% 
+  # summarise(yield_xs = mean(yield_xs, na.rm = T),
+  #           leach_xs = mean(leach_xs, na.rm = T)) %>% 
+  #           
+  ggplot(aes(yield_xs, leach_xs)) + 
+  geom_point(aes(color = rotation), size = 3) + 
+  #geom_abline() +
+  geom_smooth(method = "lm", color = "black", se = F) +
+  facet_grid(rotation ~ ., scale = "free") + 
+  scale_color_brewer(palette = "Set1") + 
+  labs(title = "Leaching pivot point vs yld pivot point")
+
 
 #--sutherland yields?
 
