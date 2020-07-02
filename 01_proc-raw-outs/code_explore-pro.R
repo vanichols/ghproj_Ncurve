@@ -12,7 +12,6 @@ rawdat <- read_csv("01_proc-raw-outs/pro_apdat.csv") %>%
   mutate(rotation2 = ifelse(rotation == "sc", "cs", rotation))
 
 
-
 # start exploring ---------------------------------------------------------
 
 
@@ -214,4 +213,15 @@ rawdat %>%
   geom_point(alpha = 0.5, aes(fill = (nrate_kgha)), pch = 21, size = 3) + 
   scale_fill_viridis_c() 
 
-ggplotly(p = ggplot2::last_plot())
+
+#ggplotly(p = ggplot2::last_plot())
+
+# no3 conc ----------------------------------------------------------------
+
+rawdat %>% 
+  select(year, nitrateflow_mg_l, yield_maize_buac, rotation, site_id, rotation2, nrate_kgha) %>% 
+  ggplot(aes(nrate_kgha, nitrateflow_mg_l)) + 
+  geom_point() + 
+  facet_grid(.~rotation2)
+
+#--I guess do the same thing as w/the leaching

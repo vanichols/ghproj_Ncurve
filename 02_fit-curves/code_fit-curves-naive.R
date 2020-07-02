@@ -3,6 +3,7 @@
 # purpose: fit curves to data
 # notes: using naive approach
 # updated: 6/11/2020, new data
+#          7/2/2020, add no3 as resp var
 
 library(tidyverse)
 library(nlraa)
@@ -36,8 +37,6 @@ leach <-
   arrange(site_id, year, nrate_kgha) 
 
 
-# fit curves --------------------------------------------------------------
-
 #--use a bi-linear function
 ?SSblin
 
@@ -62,7 +61,7 @@ nls_bilinfit <- function(x){
 nls_bilinfit(filter(leach, site_id == "hugg"))
 
 #--map function to data
-dat_parms <-
+leach_parms <-
   leach %>%
   nest(data = c(value, nrate_kgha, yearF)) %>%
   mutate(mod = data %>% map(possibly(nls_bilinfit, NULL)),
@@ -77,12 +76,12 @@ dat_parms <-
 leach %>% 
   select(site_id, year) %>% 
   distinct() %>% 
-  left_join(dat_parms) %>% 
+  left_join(leach_parms) %>% 
   filter(is.na(term))
 
 write_csv(dat_parms, "02_fit-curves/fc_blin-leach-parms.csv")
 
-dat_parms %>%
+leach_parms %>%
   unite(site_id, year, col = "site_year", remove = F) %>% 
   ggplot(aes(site_year, estimate, color = site_id)) + 
   geom_point() + 
@@ -96,6 +95,51 @@ dat_parms %>%
 ggsave("02_fit-curves/figs_blin-leach-parms.png")
 
 
+
+# no3 ---------------------------------------------------------------------
+
+no3 <- 
+  dat %>% 
+  filter(name == "nitrateflow_mg_l") %>% 
+  select(-name) %>% 
+  arrange(site_id, year, nrate_kgha) 
+
+#--map function to data
+no3_parms <-
+  no3 %>%
+  nest(data = c(value, nrate_kgha, yearF)) %>%
+  mutate(mod = data %>% map(possibly(nls_bilinfit, NULL)),
+         is_null = mod %>% map_lgl(is.null)) %>% 
+  filter(is_null == 0) %>% 
+  mutate(res = mod %>% map(possibly(~broom::tidy(.), NULL))) %>% 
+  unnest(cols = c(res)) %>% 
+  select(site_id, year, rotation, term:p.value)
+
+#--how many didn't converge?
+# 2, not bad
+no3 %>% 
+  select(site_id, year) %>% 
+  distinct() %>% 
+  left_join(dat_parms) %>% 
+  filter(is.na(term))
+
+write_csv(dat_parms, "02_fit-curves/fc_blin-no3-parms.csv")
+
+no3_parms %>%
+  unite(site_id, year, col = "site_year", remove = F) %>% 
+  ggplot(aes(site_year, estimate, color = site_id)) + 
+  geom_point() + 
+  geom_linerange(aes(ymin = estimate - std.error,
+                     ymax = estimate + std.error)) + 
+  facet_grid(rotation ~ term, scales = "free") + 
+  coord_flip() + 
+  theme(axis.text.y = element_blank()) + 
+  labs(title = "Bilinear fit to no3ing vs Nrate")
+
+ggsave("02_fit-curves/figs_blin-no3-parms.png")
+
+
+
 # yield -------------------------------------------------------------------
 
 yield <- 
@@ -106,12 +150,8 @@ yield <-
 
 
 
-#--test function
-#
-nls_bilinfit(filter(yield, site_id == "hugg"))
-
 #--map function to data
-dat_parms2 <-
+yld_parms <-
   yield %>%
   nest(data = c(value, nrate_kgha, yearF)) %>%
   mutate(mod = data %>% map(possibly(nls_bilinfit, NULL)),
@@ -126,12 +166,12 @@ dat_parms2 <-
 yield %>% 
   select(site_id, year) %>% 
   distinct() %>% 
-  left_join(dat_parms2) %>% 
+  left_join(yld_parms) %>% 
   filter(is.na(term))
 
-write_csv(dat_parms2, "02_fit-curves/fc_blin-yield-parms.csv")
+write_csv(yld_parms, "02_fit-curves/fc_blin-yield-parms.csv")
 
-dat_parms2 %>%
+yld_parms %>%
   unite(site_id, year, col = "site_year", remove = F) %>% 
   ggplot(aes(site_year, estimate, color = site_id)) + 
   geom_point() + 
@@ -145,6 +185,9 @@ dat_parms2 %>%
 ggsave("02_fit-curves/figs_blin-yield-parms.png")
 
 
+
+
+# explore -----------------------------------------------------------------
 
 
 #--does the xs from the leaching match the xs from the yield?
