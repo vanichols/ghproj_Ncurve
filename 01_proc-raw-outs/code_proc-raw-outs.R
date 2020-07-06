@@ -67,6 +67,19 @@ dat3 <-
 
 write_csv(dat3, "01_proc-raw-outs/pro_apdat.csv")
 
+#--make data for Phil Dixon
+#--leaching only, cs clarified
+dat4 <- 
+  dat3 %>%
+  select(year, rotation, site_id, nrate_kgha, leaching_kgha) %>% 
+  mutate(rotation = ifelse(rotation == "sc", "cs", rotation)) %>% 
+  arrange(year, rotation, site_id, nrate_kgha)
+
+dat4 %>% 
+  ggplot(aes(nrate_kgha, leaching_kgha)) + 
+  geom_point()
+
+write_csv(dat4, "01_proc-raw-outs/pro_lunchinators.csv")
 
 #--hoffman 2004 only had 96 mm of in-season rain?! but only for cc?
 #--addressed
