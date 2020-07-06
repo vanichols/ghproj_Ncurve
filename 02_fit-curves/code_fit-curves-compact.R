@@ -11,8 +11,10 @@ rm(list = ls())
 library(nlraa)
 library(nlme)
 library(dplyr) #--overwrites collapse from nlme
+library(tidyr)
 library(ggplot2)
 library(readr)
+library(stringr)
 library(emmeans)
 library(car) #--overwrites recode in dplyr
 library(minpack.lm)
@@ -36,15 +38,19 @@ dat <-
   arrange(site_id, year, nrate_kgha) %>%
   mutate(yearF = as.factor(year),
          rotation = dplyr::recode(rotation,
-                                  "sc" = "cs"))
+                                  "sc" = "cs")) %>%
+  select(nrate_kgha, everything()) %>% 
+  pivot_longer(annual_rain_mm:yield_maize_buac) %>% 
+  select(-date, -doy)
 
 # leaching ----------------------------------------------------------------
 
-leach <- dat %>% 
-  select(site_id, year, yearF, rotation, leaching_kgha, nrate_kgha) 
-  
+leach <- 
+  dat %>% 
+  filter(name == "leaching_kgha")
+
 #--a glimpse of the data
-ggplot(data = leach, aes(x = nrate_kgha, y = leaching_kgha)) + 
+ggplot(data = leach, aes(x = nrate_kgha, y = value)) + 
   facet_wrap(~ rotation) + 
   geom_jitter()
 
@@ -54,9 +60,9 @@ ggplot(data = leach, aes(x = nrate_kgha, y = leaching_kgha)) +
 ## 2. SSblin
 ## 3. SSexplin
 
-fm1 <- nls(leaching_kgha ~ SSexpf(nrate_kgha, a, c), data = leach)
-fm2 <- nls(leaching_kgha ~ SSblin(nrate_kgha, a, b, xs, c), data = leach)
-fm3 <- nlsLM(leaching_kgha ~ SSexplin(nrate_kgha, cm, rm, tb), data = leach)
+fm1 <- nls(value ~ SSexpf(nrate_kgha, a, c), data = leach)
+fm2 <- nls(value ~ SSblin(nrate_kgha, a, b, xs, c), data = leach)
+fm3 <- nlsLM(value ~ SSexplin(nrate_kgha, cm, rm, tb), data = leach)
 
 anova(fm1, fm2, fm3)
 anova(fm2, fm3) #--is using anova on nls objects ok? they aren't nested models...
@@ -74,11 +80,11 @@ leach1 <-
   mutate(eu = paste(site_id, year, rotation, sep = "_")) %>% #--add an eu identifier
   mutate(site_id = as.factor(site_id))
 
-leachG <- groupedData(leaching_kgha ~ nrate_kgha | eu, data = leach1)
+leachG <- groupedData(value ~ nrate_kgha | eu, data = leach1)
 leachG$rotation <- as.factor(leachG$rotation)
 
 #--fit model to each group
-lmodG <- nlsList(leaching_kgha ~ SSblin(nrate_kgha, a, b, xs, c), data = leachG) 
+lmodG <- nlsList(value ~ SSblin(nrate_kgha, a, b, xs, c), data = leachG) 
 
 #--add random effects
 lmod1 <- nlme(lmodG, random = pdDiag(a + b + c ~ 1))
@@ -118,6 +124,23 @@ tibble(aparam = c("a", "b", "c"),
          pct_eu = eu_var/tot)
 
 
+
+# extract coefficients ----------------------------------------------------
+
+coefs <- 
+  broom::tidy(lmod3a, effects = "random", conf.int=TRUE) %>% 
+  as_tibble() %>% 
+  separate(level, into = c("x", "eu"), sep = "/") %>% 
+  separate(eu, into = c("site_id", "year", "rotation")) %>% 
+  mutate(term2 = str_sub(term, 1, 2),
+         term2 = str_replace_all(term2, "[[:punct:]]", "")) %>% 
+  select(site_id, year, rotation, term2, estimate)
+
+
+write_csv(coefs, "02_fit-curves/fc_blin-leach-parms-mm.csv")
+
+# rainfall? ---------------------------------------------------------------
+
 #--plot the residual against the rainfall
 
 raincentered <- 
@@ -154,7 +177,27 @@ newdat <- dat %>%
 
 leachG$prds <- predict(lmod3a, level = 0, newdata = newdat)
 
+#--How to get xs values for each eu?
+coefs <- coef(lmod3a, level = 1)
 
+str(coefs)
+
+
+
+## coefficients (group-level estimates)
+(rcoef1 <- tidy(lmm1, effects = "ran_coefs"))
+if (require(tidyr) && require(dplyr)) {
+  ## reconstitute standard coefficient-by-level table
+  spread(rcoef1,key=term,value=estimate)
+  ## split ran_pars into type + term; sort fixed/sd/cor
+  (tt %>% separate(term,c("type","term"),sep="__",fill="left")
+    %>% arrange(!is.na(type),desc(type)))
+}
+head(augment(lmm1, sleepstudy))
+glance(lmm1)
+
+
+coefs <- broom::tidy(coefs) 
 
 sim_leach <- simulate_nlme(fmm3a, nsim = 1000, psim = 1, level = 0)
 leachG$mn.s <- apply(sim_leach, 1, mean)
@@ -163,7 +206,7 @@ leachG$mnn.s <- apply(sim_leach, 1, min)
 
 
 ggplot() + 
-  #  geom_point(data = leachG, aes(x = nrate_kgha, y = leaching_kgha)) + 
+  #  geom_point(data = leachG, aes(x = nrate_kgha, y = value)) + 
   # geom_ribbon(data = leachG, 
   #             mapping = aes(x = nrate_kgha, 
   #                           ymin = mxn.s, 
@@ -172,7 +215,7 @@ ggplot() +
   geom_point(data = leachG, aes(x = nrate_kgha, 
                                y = prds, 
                                color = rotation), size = 2) +
-  labs(y = "leaching_kgha")
+  labs(y = "value")
 
 
 
@@ -373,3 +416,121 @@ contrast(emmeans(fmnm3a, ~ rotation, param = "b"), "pairwise")
 contrast(emmeans(fmnm3a, ~ rotation, param = "xs"), "pairwise")
 contrast(emmeans(fmnm3a, ~ rotation, param = "c"), "pairwise")
 
+
+# yields ----------------------------------------------------------------
+
+ylds <- 
+  dat %>% 
+  filter(name == "yield_maize_buac")
+
+#--a glimpse of the data
+ggplot(data = ylds, aes(x = nrate_kgha, y = value)) + 
+  facet_wrap(~ rotation) + 
+  geom_jitter()
+
+## Here an important decision is what nonlinear model to use
+## Possible options are:
+## 1. SSlinp
+## 2. ?
+
+fm1 <- nls(value ~ SSlinp(nrate_kgha, a, b, xs), data = ylds)
+
+# linear plat fit ------------------------------------------------------------
+
+ylds1 <- 
+  ylds %>%
+  mutate(eu = paste(site_id, year, rotation, sep = "_")) %>% #--add an eu identifier
+  mutate(site_id = as.factor(site_id))
+
+yldsG <- groupedData(value ~ nrate_kgha | eu, data = ylds1)
+yldsG$rotation <- as.factor(yldsG$rotation)
+
+#--fit model to each group
+lmodG <- nlsList(value ~ SSlinp(nrate_kgha, a, b, xs), data = yldsG) 
+plot(intervals(lmodG))
+
+#--a, b, and xs could have random components added
+lmod1 <- nlme(lmodG, random = pdDiag(a + b + xs ~ 1))
+plot(lmod1)
+plot(lmod1, id = 0.000001) #--fernando likes things to be under 2
+plot(lmod1, id = 0.01) #--eek. 
+
+intervals(lmod1) #--random effect intervals are reasonable
+
+fxf1 <- fixef(lmod1) #--we need these if we want to add an effect of rotation
+
+#--note this an update, it keeps the random effects, we are just adding a fixed effect
+lmod2 <- update(lmod1, 
+               fixed = list(a + b + xs ~ rotation),
+               start = c(fxf1[1], 0, #--a
+                         fxf1[2], 0, #--b
+                         fxf1[3], 0)) #--xs
+
+fxf2 <- fixef(lmod2) #--now we have a value for cc and cs
+
+intervals(lmod2) #--still well constrained estimates
+plot(lmod2, id = 0.01) #--outliers mean maybe we could model the residual variance better. Don't know how to do that.
+lmod2
+
+#--take a look at a few outliers
+ylds1 %>% 
+  mutate(pred = predict(lmod2)) %>% 
+  filter(eu %in% c("gent_2005_cs", "hoff_2001_cc")) %>% 
+  ggplot(aes(nrate_kgha, value)) + 
+  geom_line(aes(nrate_kgha, pred), color = "red") + 
+  geom_point() + 
+  facet_wrap(~eu)
+
+#--this is too much to look at, not sure how to make it digestable
+#plot(augPred(lmod2, level = 0:1))
+
+## Contrasts, everything varies by rotation
+contrast(emmeans(lmod2, ~ rotation, param = "a"), "pairwise")
+contrast(emmeans(lmod2, ~ rotation, param = "b"), "pairwise")
+contrast(emmeans(lmod2, ~ rotation, param = "xs"), "pairwise")
+
+#--could try having the variance increase with higher values
+# doesn't even run
+lmod3 <- update(lmod2, weights = varPower())
+plot(lmod3, id = 0.01)
+
+#--FEM does something I don't quite get. 
+# instead of modelling the variance, try adding two random effect levels?
+lmod3a <- update(lmod2, random = list(site_id = pdDiag(a + b + xs ~ 1),
+                                    eu = pdDiag(a + b + xs ~ 1)),
+                groups = ~ site_id/eu)
+
+#--outliers don't change. how do i decide?
+plot(lmod3a, id = 0.001)
+plot(lmod2, id = 0.001)
+
+intervals(lmod3a) 
+#--I feel like these are telling me something about between site variation and w/in site var.
+#--It seems that site is absorbing more variance than the eu for a?
+
+#--interclass correlation, seems like site is helping?
+VarCorr(lmod3a)
+
+#--get % of variances
+tibble(aparam = c("a", "b", "c"),
+       site_var = as.numeric(VarCorr(lmod3a)[2:4]),
+       eu_var = as.numeric(VarCorr(lmod3a)[6:8]),
+       res_var = as.numeric(VarCorr(lmod3a)[9])) %>% 
+  mutate(tot = site_var + eu_var, #--should I add the residual?
+         pct_site = site_var/tot,
+         pct_eu = eu_var/tot)
+
+
+# extract coefficients ----------------------------------------------------
+
+coefs <- 
+  broom::tidy(lmod3a, effects = "random", conf.int=TRUE) %>% 
+  as_tibble() %>% 
+  separate(level, into = c("x", "eu"), sep = "/") %>% 
+  separate(eu, into = c("site_id", "year", "rotation")) %>% 
+  mutate(term2 = str_sub(term, 1, 2),
+         term2 = str_replace_all(term2, "[[:punct:]]", "")) %>% 
+  select(site_id, year, rotation, term2, estimate)
+
+
+write_csv(coefs, "02_fit-curves/fc_blin-ylds-parms-mm.csv")
