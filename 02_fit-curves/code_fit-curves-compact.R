@@ -136,6 +136,9 @@ coefs <-
          term2 = str_replace_all(term2, "[[:punct:]]", "")) %>% 
   select(site_id, year, rotation, term2, estimate)
 
+#--shit we didn't have xs vary by anything, only cropping system. 
+coefs %>% 
+  filter(term2 == "xs")
 
 write_csv(coefs, "02_fit-curves/fc_blin-leach-parms-mm.csv")
 
