@@ -76,6 +76,16 @@ dat4 <-
   arrange(year, rotation, site_id, nrate_kgha)
 
 dat4 %>% 
+  mutate_if(is.character, as.factor) %>% 
+  mutate(year = as.factor(year))
+  summary()
+
+str(
+  dat4 %>% 
+    mutate_if(is.character, as.factor) %>% 
+    mutate(year = as.factor(year)))
+
+dat4 %>% 
   ggplot(aes(nrate_kgha, leaching_kgha)) + 
   geom_point()
 
