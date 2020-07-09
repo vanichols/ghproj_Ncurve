@@ -22,11 +22,13 @@ yld_xs <-
   select(site_id, year, rotation, term, estimate) %>% 
   rename(yield_xs = estimate)
 
+#--note leach xs is only specific to rotation
 leach_xs <- 
   leach_prms %>% 
   filter(term == "xs") %>% 
-  select(site_id, year, rotation, term, estimate) %>% 
-  rename(leach_xs = estimate)
+  select(rotation, term, estimate) %>% 
+  rename(leach_xs = estimate) %>% 
+  distinct()
 
 
 #--something is wrong......
