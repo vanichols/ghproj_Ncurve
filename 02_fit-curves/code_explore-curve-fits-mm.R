@@ -1,48 +1,85 @@
 # author: gina
 # created: 7/6/2020
 # purpose: explore relationship between yield and leaching parms
-# last updated: 
+# last updated: 7/9/2020 fixed coefs
 
+rm(list = ls())
 library(tidyverse)
 library(plotly)
 library(scales)
 
 rawdat <- read_csv("01_proc-raw-outs/pro_apdat.csv")
-yldprms <- read_csv("02_fit-curves/fc_blin-ylds-parms-mm.csv") %>% 
-  rename(term = term2)
-leach_prms <- read_csv("02_fit-curves/fc_blin-leach-parms-mm.csv") %>% 
-  rename(term = term2)
+yldprms <- read_csv("02_fit-curves/fc_blin-yield-parms-mm.csv")
+leach_prms <- read_csv("02_fit-curves/fc_blin-leach-parms-mm.csv")
 
 
 # xs parm (pivot points)--------------------------------------------------
 
 yld_xs <-
   yldprms %>% 
-  filter(term == "xs") %>% 
-  select(site_id, year, rotation, term, estimate) %>% 
-  rename(yield_xs = estimate)
+  pivot_longer(a:xs) %>% 
+  filter(name == "xs") %>% 
+  rename(yield_xs = value)
 
 #--note leach xs is only specific to rotation
 leach_xs <- 
-  leach_prms %>% 
-  filter(term == "xs") %>% 
-  select(rotation, term, estimate) %>% 
-  rename(leach_xs = estimate) %>% 
+  leach_prms %>%
+  pivot_longer(a:c) %>% 
+  filter(name == "xs") %>% 
+  rename(leach_xs = value) %>% 
   distinct()
 
 
-#--something is wrong......
+
+# different ways to look at this ------------------------------------------
+
 yld_xs %>% 
   left_join(leach_xs) %>% 
   mutate(yld_to_lch = leach_xs - yield_xs) %>%
   arrange(yld_to_lch) %>% 
-  mutate(site_id = as.factor(site_id)) %>% 
-  ggplot(aes(reorder(site_id, yld_to_lch), yld_to_lch, 
+  mutate(site = as.factor(site)) %>% 
+  ggplot(aes(reorder(site, yld_to_lch), yld_to_lch, 
              fill = rotation)) + 
   geom_boxplot(alpha = 0.5) +
   geom_point(pch = 21, position = position_jitterdodge()) +
   geom_hline(yintercept = 0) +
-  labs(title = "Pos means leach_xs is higher than yield_xs")
+  coord_flip() +
+  labs(title = "Corn Grown After Soybean Has Larger Buffer\nBetween Yield Plateua and Start of Extreme Leaching",
+       y = "Buffer Between Yield Plateu and Leaching Pivot\n(kg N/ha Fertilization)")
+
+yld_xs %>% 
+  left_join(leach_xs) %>% 
+  mutate(yld_to_lch = leach_xs - yield_xs) %>%
+  arrange(yld_to_lch) %>% 
+  mutate(site = as.factor(site)) %>% 
+  group_by(rotation) %>% 
+  mutate(rot_mn = mean(yld_to_lch)) %>% 
+  ggplot(aes(rotation, yld_to_lch, fill = rotation)) + 
+  geom_point(pch = 19, position = position_jitterdodge(), alpha = 0.5, aes(color = rotation)) +
+  geom_segment(aes(xend = rotation, y = 0, yend = rot_mn), size = 1.5) +
+  stat_summary(fun = "mean", geom = "point", size = 8, pch = 21, stroke = 2) +
+  geom_hline(yintercept = 0) +
+  coord_flip() +
+  labs(title = "Corn Grown After Soybean Has Larger Buffer\nBetween Yield Plateua and Start of Extreme Leaching",
+       y = "Buffer Between Yield Plateu and Leaching Pivot\n(kg N/ha Fertilization)")
+
+
+
+yld_xs %>% 
+  left_join(leach_xs) %>% 
+  mutate(yld_to_lch = leach_xs - yield_xs) %>%
+  arrange(yld_to_lch) %>% 
+  mutate(site = as.factor(site)) %>%
+  group_by(site, rotation) %>% 
+  summarise(yld_to_lch = mean(yld_to_lch)) %>% 
+  ggplot(aes(reorder(site, yld_to_lch), yld_to_lch, 
+             fill = rotation,
+             color = rotation)) + 
+  geom_col(position = position_dodge2()) +
+  geom_hline(yintercept = 0) +
+  coord_flip() +
+  labs(title = "Corn Grown After Soybean Has Larger Buffer\nBetween Yield Plateua and Start of Extreme Leaching",
+       y = "Buffer Between Yield Plateu and Leaching Pivot\n(kg N/ha Fertilization)")
 
 
 site_id_lvls <- 
