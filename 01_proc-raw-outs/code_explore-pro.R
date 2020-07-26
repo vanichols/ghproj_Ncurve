@@ -7,12 +7,107 @@
 library(tidyverse)
 library(plotly)
 library(scales)
+library(ggridges)
 
 rawdat <- read_csv("01_proc-raw-outs/pro_apdat.csv") %>% 
   mutate(rotation2 = ifelse(rotation == "sc", "cs", rotation))
 
 
 # start exploring ---------------------------------------------------------
+
+#--dist of leaccing at each n rate
+rawdat %>% 
+  filter(crop == "corn") %>% 
+  mutate(nrateF = as.factor(nrate_kgha),
+         nrateF2 = factor(nrateF, levels = rev(levels(nrateF)))) %>%
+  group_by(nrateF2, rotation2) %>% 
+  mutate(mnleach = mean(leaching_kgha),
+         rotation3 = recode(rotation2,
+                            "cc" = "Corn",
+                            "cs" = "Soybean")) %>% 
+  ggplot(aes(x = leaching_kgha, y = nrateF2, fill = rotation3)) +
+  geom_density_ridges(alpha = 0.5, ) +
+  geom_point(aes(x = mnleach, y = nrateF2, color = rotation3), pch = 22, size = 3) +
+  scale_color_manual(values = c("gold2", "dodgerblue4")) +
+  scale_fill_manual(values = c("gold2", "dodgerblue4")) +
+  labs(y = "N Fert Rate (kg/ha)",
+         fill = "Previous Crop",
+         color = "Previous Crop",
+       title = "Leaching from Corn Phase, 159 Site-Year Simulations")
+
+
+#--compare soy and corn in cs rotation
+rawdat %>% 
+  filter(rotation2 == "cs") %>% 
+  mutate(nrateF = as.factor(nrate_kgha),
+         nrateF2 = factor(nrateF, levels = rev(levels(nrateF)))) %>%
+  group_by(nrateF2, crop) %>% 
+  mutate(mnleach = mean(leaching_kgha)) %>% 
+  ggplot(aes(x = leaching_kgha, y = nrateF2, fill = crop)) +
+  geom_density_ridges(alpha = 0.5, ) +
+  geom_point(aes(x = mnleach, y = nrateF2, color = crop), pch = 22, size = 3) +
+  scale_color_manual(values = c("gold2", "green4")) +
+  scale_fill_manual(values = c("gold2", "green4")) +
+  labs(y = "N Fert Rate (kg/ha)",
+       title = "Leaching from Corn/Soybean Phase of CS Rotation, 159 Site-Year Simulations")
+
+#--compare all phases
+rawdat %>% 
+  mutate(nrateF = as.factor(nrate_kgha),
+         nrateF2 = factor(nrateF, levels = rev(levels(nrateF)))) %>%
+  group_by(nrateF2, crop, rotation2) %>% 
+  mutate(mnleach = mean(leaching_kgha)) %>% 
+  ggplot(aes(x = leaching_kgha, y = nrateF2, fill = interaction(crop, rotation2))) +
+  geom_density_ridges(alpha = 0.5, ) +
+  geom_point(aes(x = mnleach, y = nrateF2), pch = 22, size = 3) +
+  labs(title = "Leaching from 159 Site-Year Simulations",
+       y = "N Fert Rate (kg/ha)") 
+
+ggsave("01_proc-raw-outs/fig_leach-ggridges.png")
+ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_leaching_dist.png")
+
+
+#--compare yields at different n rates
+rawdat %>% 
+  filter(crop == "corn") %>% 
+  mutate(nrateF = as.factor(nrate_kgha),
+         nrateF2 = factor(nrateF, levels = rev(levels(nrateF)))) %>%
+  group_by(nrateF2, crop, rotation2) %>% 
+  mutate(mnyld = mean(yield_maize_buac),
+         rotation3 = recode(rotation2,
+                            "cc" = "Corn",
+                            "cs" = "Soybean")) %>% 
+  ggplot(aes(x = yield_maize_buac, y = nrateF2, fill = rotation3)) +
+  geom_density_ridges(alpha = 0.5, ) +
+  geom_point(aes(x = mnyld, y = nrateF2), pch = 22, size = 3) +
+  scale_color_manual(values = c("gold2", "dodgerblue4")) +
+  scale_fill_manual(values = c("gold2", "dodgerblue4")) +
+  labs(y = "N Fert Rate (kg/ha)",
+       fill = "Previous Crop",
+       color = "Previous Crop",
+       title = "Corn Yields, 159 Site-Year Simulations")
+
+
+ggsave("01_proc-raw-outs/fig_yield-ggridges.png")
+ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_cornyields_dist.png")
+
+
+#--calc CVs
+rawdat %>% 
+  select(year, leaching_kgha, site_id, rotation2) %>% 
+  group_by(site_id, rotation2) %>% 
+  summarise(mn = mean(leaching_kgha),
+            sd = sd(leaching_kgha),
+            cv = sd/mn*100,
+            stab = 1/cv) %>% 
+  ungroup() %>% 
+  group_by(rotation2) %>% 
+  mutate(stab_rel = stab/max(stab)) %>% 
+  ggplot(aes(reorder(site_id, stab_rel), stab_rel)) + 
+  geom_col() + 
+  coord_flip() +
+  facet_grid(.~rotation2) + 
+  labs(title = "leaching stability")
 
 
 rawdat %>% 

@@ -59,9 +59,12 @@ yld_xs %>%
   geom_segment(aes(xend = rotation, y = 0, yend = rot_mn), size = 1.5) +
   stat_summary(fun = "mean", geom = "point", size = 8, pch = 21, stroke = 2) +
   geom_hline(yintercept = 0) +
+  scale_color_manual(values = c("orange", "purple")) +
+  scale_fill_manual(values = c("orange", "purple")) +
   coord_flip() +
   labs(title = "Corn Grown After Soybean Has Larger Buffer\nBetween Yield Plateua and Start of Extreme Leaching",
-       y = "Buffer Between Yield Plateu and Leaching Pivot\n(kg N/ha Fertilization)")
+       y = "Buffer Between Yield Plateu and Leaching Pivot\n(kg N/ha Fertilization)") + 
+  theme_bw()
 
 
 
