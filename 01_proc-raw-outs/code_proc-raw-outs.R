@@ -3,6 +3,7 @@
 # purpose: process heather's data
 # last updated: 6/8/2020 (yields weren't crop specific, asked heather to change)
 #               6/16/2020 (weather in hoffman cc was wrong)
+#               7/26/2020 (add soybean back into processed data)
 
 library(tidyverse)
 library(stringr)
@@ -56,7 +57,8 @@ dat3 <-
   dat2 %>% 
   mutate(site_id = stringr::str_sub(site, 1, 4)) %>% 
   select(-site, -rot, -nrate) %>% 
-  filter(yield_maize_buac != 0) %>% #--keep only maize data
+  mutate(crop = ifelse(yield_soy_buac == 0, "corn", "soy")) %>% #--make the crop explicit
+  #filter(yield_maize_buac != 0) %>% #--keep only maize data
   #--Heather says spin is 1994-1998. Start in 1999
   #--based on figs, it should start in 2000, not 1999
   filter(year >= 2000) %>% 
