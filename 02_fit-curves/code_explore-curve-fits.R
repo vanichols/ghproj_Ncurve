@@ -96,6 +96,34 @@ leach_xs <-
   rename(leach_xs = estimate)
 
 
+yld <- 
+  yld_xs %>% 
+  ggplot(aes(site_id, yield_xs)) + 
+  geom_point() + 
+  stat_summary(color = "red", size = 2)
+
+lch <- 
+  leach_xs %>% 
+  ggplot(aes(site_id, leach_xs)) + 
+  geom_point() + 
+  stat_summary(color = "blue", size = 2)
+
+yld_xs %>% 
+  rename(xs = yield_xs) %>%
+  mutate(cat = "yield")  %>% 
+  bind_rows(leach_xs %>%  rename(xs = leach_xs) %>% mutate(cat = "leach")) %>% 
+  ggplot(aes(site_id, xs, color = cat)) +
+  geom_jitter() +
+  stat_summary(size = 2) + 
+  facet_grid(.~rotation) + 
+  labs(title = "comparing leaching and yield breakpoints")
+
+ggsave("02_fit-curves/figs_xs.png")
+
+
+
+library(patchwork)
+yld /lch
 
 yld_xs %>% 
   left_join(leach_xs) %>% 
