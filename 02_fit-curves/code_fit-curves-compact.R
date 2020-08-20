@@ -1,7 +1,7 @@
 # author: gina
 # created; 7/2/2020
 # purpose: have fitting occur in compact way
-# last updated: 
+# last updated: 8/20/2020, running without sutherland
 
 rm(list = ls())
 
@@ -50,12 +50,19 @@ dat <-
 
 leach <- 
   dat %>% 
-  filter(name == "leaching_kgha")
+  filter(name == "leaching_kgha") %>% 
+  filter(crop == "corn")
 
 #--a glimpse of the data
 ggplot(data = leach, aes(x = nrate_kgha, y = value)) + 
   facet_wrap(~ rotation) + 
   geom_jitter()
+
+library(ggridges)
+ggplot(data = leach, aes(x = value, y = site_id)) + 
+  geom_density_ridges() + 
+  facet_grid(.~crop)
+  
 
 ## Here an important decision is what nonlinear model to use
 ## Possible options are:
@@ -143,53 +150,53 @@ tibble(aparam = c("a", "b", "c"),
 ############ Dummy model ##############################
 #--do a smaller dummy model to figure this out
 #--fit model to each group
-dat_dum <- leachG %>% filter(site_id %in% c("gent", "klad"))
-
-lmodG <- nlsList(value ~ SSblin(nrate_kgha, a, b, xs, c), data = dat_dum) 
-lmod1 <- nlme(lmodG, random = pdDiag(a + b + c ~ 1))
-mod_dumG <-nlsList(value ~ SSblin(nrate_kgha, a, b, xs, c), 
-                data = dat_dum)
-mod_dum1 <- nlme(mod_dumG, random = pdDiag(a + b +c ~ 1))
-mod_dum <- update(mod_dum1, 
-                  fixed = list(a + b + xs + c ~ rotation),
-                start = c(fxf1[1], 0, #--a
-                          fxf1[2], 0, #--b
-                          fxf1[3], 0, #--xs
-                          fxf1[4], 0))
-
-emmeans(mod_dum, ~ rotation, param = "a")
-emmeans(mod_dum, ~ rotation, param = "xs")
-
-
-tidy(mod_dum)
+# dat_dum <- leachG %>% filter(site_id %in% c("gent", "klad"))
+# 
+# lmodG <- nlsList(value ~ SSblin(nrate_kgha, a, b, xs, c), data = dat_dum) 
+# lmod1 <- nlme(lmodG, random = pdDiag(a + b + c ~ 1))
+# mod_dumG <-nlsList(value ~ SSblin(nrate_kgha, a, b, xs, c), 
+#                 data = dat_dum)
+# mod_dum1 <- nlme(mod_dumG, random = pdDiag(a + b +c ~ 1))
+# mod_dum <- update(mod_dum1, 
+#                   fixed = list(a + b + xs + c ~ rotation),
+#                 start = c(fxf1[1], 0, #--a
+#                           fxf1[2], 0, #--b
+#                           fxf1[3], 0, #--xs
+#                           fxf1[4], 0))
+# 
+# emmeans(mod_dum, ~ rotation, param = "a")
+# emmeans(mod_dum, ~ rotation, param = "xs")
+# 
+# 
+# tidy(mod_dum)
 #--augment gives me predicted values at each point in the data frame
 #--.fixed doesn't include random effects
 #aug_mod <- augment(mod_dum, data = leachG %>% filter(site_id %in% c("gent", "klad")))
 
 
-aug_mod %>% 
-  ggplot() + 
-  geom_point(aes(nrate_kgha, value), color = "red") + 
-  geom_line(aes(nrate_kgha, .fitted), color = "gray") + 
-  geom_line(aes(nrate_kgha, .fixed), color = "blue") + 
-  facet_wrap(.~eu)
-
-#--just the fixed effects
-tidy(mod_dum, effects = "fixed")
-
-
-#--try another way
-tidy(mod_dum, effects = "random") %>% 
-  mutate(term2 = str_sub(term, 1, 2),
-         term2 = str_replace_all(term2, "[[:punct:]]", ""),
-         termrot = ifelse(grepl("cs", term), "csterm", "ccterm")) %>%
-  select(-term) %>% 
-  pivot_wider(names_from = termrot, 
-              values_from = estimate) %>%  
-  separate(level, into = c("site", "year", "rotation")) %>% 
-  mutate(est = ifelse(rotation == "cs", ccterm + csterm, ccterm)) %>% 
-  select(-ccterm, -csterm) %>% 
-  pivot_wider(names_from = term2, values_from = est)
+# aug_mod %>% 
+#   ggplot() + 
+#   geom_point(aes(nrate_kgha, value), color = "red") + 
+#   geom_line(aes(nrate_kgha, .fitted), color = "gray") + 
+#   geom_line(aes(nrate_kgha, .fixed), color = "blue") + 
+#   facet_wrap(.~eu)
+# 
+# #--just the fixed effects
+# tidy(mod_dum, effects = "fixed")
+# 
+# 
+# #--try another way
+# tidy(mod_dum, effects = "random") %>% 
+#   mutate(term2 = str_sub(term, 1, 2),
+#          term2 = str_replace_all(term2, "[[:punct:]]", ""),
+#          termrot = ifelse(grepl("cs", term), "csterm", "ccterm")) %>%
+#   select(-term) %>% 
+#   pivot_wider(names_from = termrot, 
+#               values_from = estimate) %>%  
+#   separate(level, into = c("site", "year", "rotation")) %>% 
+#   mutate(est = ifelse(rotation == "cs", ccterm + csterm, ccterm)) %>% 
+#   select(-ccterm, -csterm) %>% 
+#   pivot_wider(names_from = term2, values_from = est)
 
 ############ End dummy trial
 
@@ -213,6 +220,38 @@ leach_coefs
 emmeans(lmod3a, ~ rotation, param = "xs")
 
 write_csv(leach_coefs, "02_fit-curves/fc_blin-leach-parms-mm.csv")
+
+#-make predictions so I can make graphs
+
+nrates <- seq(0, 300)
+
+dat %>% 
+  select(yearF, rotation, site_id) %>% 
+  unique() %>% 
+  expand_grid(., nrates) %>% 
+  mutate(preds = predict(lmod3a, newdata = .))
+
+newP <- data.frame(nrate_kgha = seq(0, 300))
+
+predict(lmod3a, newP, level = 0:1)
+
+#--example from predict.nlme
+fm1 <- nlme(height ~ SSasymp(age, Asym, R0, lrc),  data = Loblolly,
+            fixed = Asym + R0 + lrc ~ 1,
+            random = Asym ~ 1, ## <---grouping--->  Asym ~ 1 | Seed
+            start = c(Asym = 103, R0 = -8.5, lrc = -3.3))
+fm1
+
+age. <- seq(from = 2, to = 30, by = 2)
+newLL.301 <- data.frame(age = age., Seed = 301)
+newLL.329 <- data.frame(age = age., Seed = 329)
+(p301 <- predict(fm1, newLL.301, level = 0:1))
+(p329 <- predict(fm1, newLL.329, level = 0:1))
+## Prediction are the same at level 0 :
+all.equal(p301[,"predict.fixed"],
+          p329[,"predict.fixed"])
+
+
 
 # rainfall? ---------------------------------------------------------------
 
@@ -475,7 +514,8 @@ contrast(emmeans(fmnm3a, ~ rotation, param = "c"), "pairwise")
 
 ylds <- 
   dat %>% 
-  filter(name == "yield_maize_buac")
+  filter(name == "yield_maize_buac") %>% 
+  filter(crop == "corn")
 
 #--a glimpse of the data
 ggplot(data = ylds, aes(x = nrate_kgha, y = value)) + 

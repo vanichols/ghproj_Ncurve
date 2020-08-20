@@ -2,6 +2,7 @@
 # created: 7/6/2020
 # purpose: explore relationship between yield and leaching parms
 # last updated: 7/9/2020 fixed coefs
+#               8/20/2020 removed sutherland
 
 rm(list = ls())
 library(tidyverse)
@@ -30,6 +31,69 @@ leach_xs <-
   distinct()
 
 
+# combine them ------------------------------------------------------------
+
+buff <- 
+  yld_xs %>% 
+  left_join(leach_xs) %>% 
+  mutate(yld_to_lch = leach_xs - yield_xs) 
+
+
+buff %>% 
+  group_by(rotation) %>% 
+  summarise(mn_buf = mean(yld_to_lch))
+
+
+anova(lm(yld_to_lch ~ rotation*site, data = buff))
+
+
+
+# heather's graphs --------------------------------------------------------
+
+# she wants all of the lines for aonr and leaching
+
+
+buff %>% 
+  mutate(rot = as.character(rotation),
+         rot2 = dplyr::recode(rot,
+                              "cc" = "Continuous Maize",                        
+                              "cs" = "Rotated Maize")) %>% 
+  ggplot(aes(rot2, yld_to_lch)) + 
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_jitter(color = "gray80", width = 0.1) + 
+  stat_summary(geom = "point", aes(fill = rot2), size = 5, pch = 24 ) +
+  scale_color_manual(values = c("Continuous Maize" = "darkblue",
+                                "Rotated Maize" = "orange2")) +
+  scale_fill_manual(values = c("Continuous Maize" = "darkblue",
+                                "Rotated Maize" = "orange2")) +
+  labs(color = NULL,
+       fill = NULL,
+         y = "Difference Between Leaching and Yield Pivot Points (kg N ha-1)",
+         x = NULL) +
+  guides(color = F,
+         fill = F) +
+  theme_bw() + 
+  theme(legend.position = c(0.2,0.9),
+        axis.text = element_text(size = rel(1.2)),
+        axis.title = element_text(size = rel(1.2)),
+        legend.text = element_text(size = rel(1.3)),
+        legend.background = element_rect(color = "black"))
+
+ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/manuscript/fig_buffer.png", width = 4)
+
+
+library(ggrepel)
+buff %>% 
+  filter(rotation == "cs") %>% 
+  ggplot(aes(rotation, yld_to_lch)) + 
+  geom_jitter(aes(color = site)) + 
+  geom_label_repel(aes(label = site))
+
+buff %>% 
+  filter(rotation == "cs") %>% 
+  filter(yld_to_lch > 50) %>% 
+  filter(yld_to_lch > 60) %>% 
+  mutate_if(is.numeric, round, 0)->a
 
 # different ways to look at this ------------------------------------------
 

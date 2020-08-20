@@ -3,6 +3,7 @@
 # purpose: process heather's data
 # last updated: 6/8/2020 (yields weren't crop specific, asked heather to change)
 #               6/17/2020 look at soils data
+#               8/20/2020 (removed sutherland, checking)
 
 library(tidyverse)
 library(plotly)
