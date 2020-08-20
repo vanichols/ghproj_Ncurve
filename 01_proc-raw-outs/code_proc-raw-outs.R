@@ -4,6 +4,7 @@
 # last updated: 6/8/2020 (yields weren't crop specific, asked heather to change)
 #               6/16/2020 (weather in hoffman cc was wrong)
 #               7/26/2020 (add soybean back into processed data)
+#               8/20/2020 (remove sutherland from analysis)
 
 library(tidyverse)
 library(stringr)
@@ -66,8 +67,18 @@ dat3 <-
   filter( ! (year == 2012 & site_id == "hoff")) %>% 
   rename(nrate_kgha = n_rate_kgha)
 
+#--remove sutherland from analysis (8/20/2020, see 20200819_Qs in Heather Box folder)
+dat4 <- 
+  dat3 %>% 
+  filter(site_id != "suth")
 
-write_csv(dat3, "01_proc-raw-outs/pro_apdat.csv")
+write_csv(dat4, "01_proc-raw-outs/pro_apdat.csv")
+
+
+
+# other -------------------------------------------------------------------
+
+
 
 #--make data for Phil Dixon
 #--leaching only, cs clarified

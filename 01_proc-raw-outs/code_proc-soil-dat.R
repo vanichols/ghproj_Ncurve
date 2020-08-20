@@ -24,7 +24,8 @@ asite <-
   mutate_if(is.numeric, round, 0) %>% 
   janitor::clean_names() %>% 
   select(-(year:crop_p_dom), -cropsys) %>% 
-  distinct()
+  distinct() %>% 
+  filter(site_id != "suth") #-remove suth, 8/20
 
 asite
 
@@ -45,12 +46,16 @@ asoil <- read_csv("../../../Box/1_Gina_Projects/proj_Ncurve/20200618_apsimsoil.c
   mutate_if(is.character, stringr::str_trim) %>% 
   mutate(site_id = stringr::str_sub(site_id, 1, 4)) %>% 
   select(site_id, depth_inc:pH) %>% 
-  janitor::clean_names()
+  janitor::clean_names() %>% 
+  filter(site_id != "suth") #-remove suth 8/20
 
 asoil %>% select(site_id) %>% distinct()
 
 write_csv(asoil, "01_proc-raw-outs/pro_soils.csv")
 
+
+
+# looking at things -------------------------------------------------------
 
 #--mean values for 0-60cm
 asoil %>% 
