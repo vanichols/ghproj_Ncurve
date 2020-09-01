@@ -69,6 +69,7 @@ fxf2 <- fixef(ymod2) #--now we have a value for cc and cs
 ymod3a <- update(ymod2, random = list(site_id = pdDiag(a + b + xs ~ 1),
                                     eu = pdDiag(a + b + xs ~ 1)),
                 groups = ~ site_id/eu)
+
 # extract coefficients ----------------------------------------------------
 
 yld_coefs <- 
