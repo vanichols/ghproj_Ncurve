@@ -42,9 +42,10 @@ buff %>%
   summarise(mn_buf = mean(yld_to_lch))
 
 
-anova(lm(yld_to_lch ~ rotation*site, data = buff))
-
-
+m1 <- (lm(yld_to_lch ~ rotation*site, data = buff))
+anova(m1)
+library(emmeans)
+emmeans(m1, pairwise ~ rotation)
 
 # heather's graphs --------------------------------------------------------
 
