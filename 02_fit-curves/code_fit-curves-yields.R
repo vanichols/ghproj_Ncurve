@@ -109,6 +109,8 @@ pred_dat <-
   mutate(preds = predict(ymod3a, newdata = .),
          preds = saf_buac_to_kgha_corn(preds)/1000)
 
+pred_dat %>% write_csv("02_fit-curves/fc_yield-preds-eu.csv")
+
 #--at level of crop rotation
 pred_dat2 <- 
   yldsG %>% 
@@ -124,23 +126,5 @@ pred_dat2 <-
                               "cc" = "Continuous Maize",                        
                               "cs" = "Rotated Maize"))
 
-pred_dat %>% 
-  ggplot(aes(nrate_kgha, preds, group = eu)) + 
-  geom_line(color = "gray80") + 
-  geom_line(data = pred_dat2, 
-            aes(nrate_kgha, preds, color = rot2, group = rot2),
-            size = 2) + 
-  scale_color_manual(values = c("Continuous Maize" = "darkblue",
-                                "Rotated Maize" = "orange2")) +
-  labs(color = NULL,
-       y = "Yields (Mg ha-1)",
-       x = "Fertilizer Applied (kg N ha-1)") +
-  theme_bw() + 
-  theme(legend.position = c(0.2,0.9),
-        axis.text = element_text(size = rel(1.2)),
-        axis.title = element_text(size = rel(1.2)),
-        legend.text = element_text(size = rel(1.3)),
-        legend.background = element_rect(color = "black"))
-
-ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/manuscript/fig_yields.png", width = 6)
+pred_dat2 %>% write_csv("02_fit-curves/fc_yield-preds-rot.csv")
 
