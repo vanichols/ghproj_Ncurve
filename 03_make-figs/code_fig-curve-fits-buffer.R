@@ -73,7 +73,7 @@ buff_fig <-
                               "cc" = "Continuous Maize",                        
                               "cs" = "Rotated Maize")) %>% 
   ggplot(aes(rot2, yld_to_lch)) + 
-  geom_violin(aes(fill = rot2), alpha = 0.5) + 
+  geom_violin(aes(fill = rot2)) + 
   geom_hline(yintercept = 0, linetype = "dashed") +
   scale_fill_manual(values = c(clr2, clr1)) +
   labs(fill = NULL,
