@@ -90,6 +90,32 @@ yld_coefs <-
 write_csv(yld_coefs, "02_fit-curves/fc_blin-yield-parms-mm.csv")
 
 
+# try to get data for boxplots? -------------------------------------------
+
+# What is spread in xs estimate?
+
+yld_xs <- 
+  tidy(ymod3a, effects = "random") %>% 
+  mutate(term2 = str_sub(term, 1, 2),
+         term2 = str_replace_all(term2, "[[:punct:]]", ""),
+         termrot = ifelse(grepl("cs", term), "csterm", "ccterm")) %>% #--if it doesn't have a 'cs', assume it's cc
+  select(-term) %>% 
+  pivot_wider(names_from = termrot, 
+              values_from = estimate) %>%  
+  separate(level, into = c("site", "site_year_rotation"), sep = "/") %>% 
+  filter(term2 == "xs") %>% 
+  separate(site_year_rotation, into = c("site", "year", "rotation"), sep = "_") %>% 
+  mutate(est = ifelse(rotation == "cs", ccterm + csterm, ccterm)) %>% #--if it's the cs rot, add the cs effect
+  select(-ccterm, -csterm, -group) 
+
+
+write_csv(yld_xs, "02_fit-curves/fc_blin-yield-xs-mm.csv")
+
+
+
+
+
+
 # use model to make preds -------------------------------------------------
 library(saapsim) #--for bu/ac to kg/ha conversion
 saf_buac_to_kgha_corn()
@@ -141,4 +167,25 @@ pred_dat2 <-
                               "cs" = "Rotated Maize"))
 
 pred_dat2 %>% write_csv("02_fit-curves/fc_yield-preds-rot.csv")
+
+
+
+# use fernando's thing? ---------------------------------------------------
+
+sim_yld <- simulate_nlme(ymod3a, nsim = 100, psim = 1, level = 0)
+yldsG$mn.s <- apply(sim_yld, 1, mean)
+leachG$mxn.s <- apply(sim_leach, 1, max)
+leachG$mnn.s <- apply(sim_leach, 1, min)
+
+
+ggplot() + 
+  geom_ribbon(data = leachG,
+              mapping = aes(x = nrate_kgha,
+                            ymin = mxn.s,
+                            ymax = mnn.s, fill = rotation),
+              alpha = 0.5) +
+  geom_line(data = leachG, aes(x = nrate_kgha, 
+                               y = prds, 
+                               color = rotation), size = 2) +
+  labs(y = "leaching_kgha")
 
