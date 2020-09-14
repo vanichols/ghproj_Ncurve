@@ -98,7 +98,8 @@ saf_buac_to_kgha_corn()
 
 nrates <- seq(0, 300)
 
-ymod3a
+summary(ymod3a)
+intervals(ymod3a)
 
 #--at level of eu
 pred_dat <- 
@@ -106,10 +107,23 @@ pred_dat <-
   select(yearF, rotation, site_id, eu) %>% 
   expand_grid(., nrates) %>% 
   rename(nrate_kgha = nrates) %>% 
-  mutate(preds = predict(ymod3a, newdata = .),
+  mutate(preds = predict(ymod3a, newdata = ., level = 2),
          preds = saf_buac_to_kgha_corn(preds)/1000)
 
 pred_dat %>% write_csv("02_fit-curves/fc_yield-preds-eu.csv")
+
+
+#--at level of site?
+pred_dat1 <- 
+  yldsG %>% 
+  select(yearF, rotation, site_id, eu) %>% 
+  expand_grid(., nrates) %>% 
+  rename(nrate_kgha = nrates) %>% 
+  mutate(preds = predict(ymod3a, newdata = ., level = 1),
+         preds = saf_buac_to_kgha_corn(preds)/1000)
+
+pred_dat %>% write_csv("02_fit-curves/fc_yield-preds-eu.csv")
+
 
 #--at level of crop rotation
 pred_dat2 <- 

@@ -1,9 +1,9 @@
-site_id,lat,long,exp_type,wt_depth,tile_depth,tile_space,cropsys_tillage
-rand,44,-94,tillage,120,120,2700,moldboard
-hugg,44,-95,rotation,92,120,2800,moldboard
-masa,43,-89,tillage,115,140,4000,chisel
-hoff,40,-87,spacing,129,100,2000,chisel
-klad,39,-86,spacing,130,75,2000,chisel
-gold,43,-84,tillage,138,120,1800,moldboard
-gent,40,-88,tillage,90,125,4000,chisel
-gilm,42,-95,n rate,91,106,760,chisel
+order,site_id,site_id2,lat,long,exp_type,wt_depth,tile_depth,tile_space,cropsys_tillage
+1,rand,MN1,44,-94,tillage,120,120,2700,moldboard
+2,hugg,MN2,44,-95,rotation,92,120,2800,moldboard
+4,masa,WI,43,-89,tillage,115,140,4000,chisel
+8,hoff,IN2,40,-87,spacing,129,100,2000,chisel
+7,klad,IN1,39,-86,spacing,130,75,2000,chisel
+5,gold,MI,43,-84,tillage,138,120,1800,moldboard
+6,gent,IL,40,-88,tillage,90,125,4000,chisel
+3,gilm,IA,42,-95,n rate,91,106,760,chisel

@@ -56,6 +56,7 @@ lmodG <- nlsList(value ~ SSblin(nrate_kgha, a, b, xs, c), data = leachG)
 lmod1 <- nlme(lmodG, random = pdDiag(a + b + c ~ 1)) #--add random effects
 #--add fixed effect of rotation
 fxf1 <- fixef(lmod1) 
+
 lmod2 <- update(lmod1, 
                fixed = list(a + b + xs + c ~ rotation),
                start = c(fxf1[1], 0, #--a
@@ -77,6 +78,8 @@ lmod3a <- update(lmod2,
 nrates <- seq(0, 300)
 
 lmod3a
+summary(lmod3a)
+
 
 #--at level of eu
 pred_dat <- 

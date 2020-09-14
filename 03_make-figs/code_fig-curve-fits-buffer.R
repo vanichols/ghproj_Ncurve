@@ -16,6 +16,10 @@ clr1 <- "orange2"
 clr2 <- "darkblue"
 
 
+nleachlab <- expression(Nitrogen~Leached~(kg~N~ha^-1))
+yldlab <- expression(Maize~Yield~(Mg~ha^-1))
+nfertlab <- expression(Nitrogen~Fertilizer~Applied~(kg~N~ha^-1))
+bufflab <- expression(Environmental~Buffer~(kg~N~ha^-1))
 
 # buffer fig --------------------------------------------------------------
 
@@ -29,7 +33,11 @@ yld_xs <-
   yldprms %>% 
   pivot_longer(a:xs) %>% 
   filter(name == "xs") %>% 
-  rename(yield_xs = value)
+  rename(yield_xs = value) %>% 
+  mutate(rot = as.character(rotation),
+         rot2 = dplyr::recode(rot,
+                              "cc" = "Continuous Maize",                        
+                              "cs" = "Rotated Maize")) 
 
 #--note leach xs is only specific to rotation
 leach_xs <- 
@@ -37,31 +45,16 @@ leach_xs <-
   pivot_longer(a:c) %>% 
   filter(name == "xs") %>% 
   rename(leach_xs = value) %>% 
-  distinct()
+  distinct() %>% 
+  mutate(rot = as.character(rotation),
+         rot2 = dplyr::recode(rot,
+                              "cc" = "Continuous Maize",                        
+                              "cs" = "Rotated Maize")) 
 
 buff <- 
   yld_xs %>% 
   left_join(leach_xs) %>% 
   mutate(yld_to_lch = leach_xs - yield_xs) 
-
-
-#--density ridges
-buff %>% 
-  mutate(rot = as.character(rotation),
-         rot2 = dplyr::recode(rot,
-                              "cc" = "Continuous Maize",                        
-                              "cs" = "Rotated Maize")) %>% 
-  ggplot(aes(yld_to_lch, rot2)) + 
-  geom_density_ridges(aes(fill = rot2), alpha = 0.5) + 
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  scale_fill_manual(values = c(clr1, clr2)) +
-  labs(fill = NULL,
-       x = "Difference Between Leaching and Yield Pivot Points (kg N ha-1)",
-       y = NULL) +
-  guides(color = F,
-         fill = F) +
-  coord_flip() +
-  theme_bw() 
 
 
 #--violin
@@ -77,17 +70,19 @@ buff_fig <-
   geom_hline(yintercept = 0, linetype = "dashed") +
   scale_fill_manual(values = c(clr2, clr1)) +
   labs(fill = NULL,
-       y = "Environmental Buffer (kg N ha-1)",
-       x = NULL) +
+       y = bufflab,
+       x = NULL,
+       title = "(C)") +
   guides(color = F,
          fill = F) +
   theme_bw() +
   theme(axis.text = element_text(size = rel(1.2)),
         axis.title = element_text(size = rel(1.3)),
         legend.position = "top",
-        legend.text = element_text(size = rel(1.3)))
+        legend.text = element_text(size = rel(1.3)),
+        plot.title = element_text(size = rel(1.5), face = "bold"))
 
-
+buff_fig
 
 # leaching curves ---------------------------------------------------------
 
@@ -106,8 +101,8 @@ leach_fig <-
   scale_color_manual(values = c("Continuous Maize" = "darkblue",
                                 "Rotated Maize" = "orange2")) +
   labs(color = NULL,
-       y = "Nitrogen Leaching (kg ha-1)",
-       x = "Nitrogen Fertilizer Applied (kg N ha-1)") +
+       y = nleachlab,
+       x = nfertlab) +
   theme_bw() + 
   guides(color = F) +
   theme(legend.position = c(0.2,0.9),
@@ -115,6 +110,58 @@ leach_fig <-
         axis.title = element_text(size = rel(1.2)),
         legend.text = element_text(size = rel(1.3)),
         legend.background = element_rect(color = "black"))
+
+
+leach_fig2 <- 
+  leach_xs  %>% 
+  ggplot(aes(name, leach_xs)) + 
+  geom_boxplot(aes(fill = rotation, color = rotation)) + 
+  scale_fill_manual(values = c("darkblue",
+                               "orange2")) +
+  scale_color_manual(values = c("darkblue",
+                               "orange2")) +
+  scale_y_continuous(limits = c(0, 300)) +
+  guides(fill = F,
+         color = F) +
+  labs(x = NULL, y = NULL) +
+  coord_flip() + 
+  theme_bw() + 
+  theme(
+    axis.ticks = element_blank(),
+    axis.text = element_blank(),
+    axis.title = element_text(size = rel(1.2)),
+    legend.text = element_text(size = rel(1.3)),
+    legend.background = element_rect(color = "black")
+  )
+
+
+leach_rug <- 
+  pred_dat %>% 
+  filter(preds > 0) %>% 
+  ggplot(aes(nrate_kgha, preds, group = eu)) + 
+  geom_line(color = "gray80") + 
+  geom_line(data = pred_dat2, 
+            aes(nrate_kgha, preds, color = rot2, group = rot2),
+            size = 2) + 
+  geom_rug(data = leach_xs, 
+           aes(x = leach_xs, y = 0, color = rot2, group = rot2), 
+           position = "jitter",
+           alpha = 0.5,
+           sides = "b") +
+  scale_color_manual(values = c("Continuous Maize" = "darkblue",
+                                "Rotated Maize" = "orange2")) +
+  labs(color = NULL,
+       y = nleachlab,
+       x = nfertlab,
+       title = "(B)") +
+  theme_bw() + 
+  guides(color = F) +
+  theme(legend.position = c(0.2,0.9),
+        axis.text = element_text(size = rel(1.2)),
+        axis.title = element_text(size = rel(1.2)),
+        legend.text = element_text(size = rel(1.3)),
+        legend.background = element_rect(color = "black"),
+        plot.title = element_text(size = rel(1.5), face = "bold"))
 
 
 
@@ -134,8 +181,8 @@ yield_fig <-
   scale_color_manual(values = c("Continuous Maize" = "darkblue",
                                 "Rotated Maize" = "orange2")) +
   labs(color = NULL,
-       y = "Maize Grain Yield (Mg ha-1)",
-       x = "Nitrogen Fertilizer Applied (kg N ha-1)") +
+       y = yldlab,
+       x = nfertlab) +
   guides(color = F) +
   theme_bw() + 
   theme(legend.position = "top") + 
@@ -147,6 +194,56 @@ yield_fig <-
     legend.background = element_rect(color = "black")
   )
 
+
+#--yield box plot
+
+yield_fig2 <- 
+  yld_xs  %>% 
+  ggplot(aes(name, yield_xs)) + 
+  geom_boxplot(aes(fill = rotation)) + 
+  scale_fill_manual(values = c("darkblue",
+                                "orange2")) +
+  scale_y_continuous(limits = c(0, 300)) +
+  guides(fill = F) +
+  labs(x = NULL, y = NULL) +
+  coord_flip() + 
+  theme_bw() + 
+  theme(
+    axis.ticks = element_blank(),
+    axis.text = element_blank(),
+    axis.title = element_text(size = rel(1.2)),
+    legend.text = element_text(size = rel(1.3)),
+    legend.background = element_rect(color = "black")
+  )
+
+
+yield_rug <- 
+  pred_dat3 %>% 
+  ggplot(aes(nrate_kgha, preds, group = eu)) +
+  geom_line(color = "gray80") + 
+  geom_line(data = pred_dat4, 
+            aes(nrate_kgha, preds, color = rot2, group = rot2),
+            size = 2) + 
+  geom_rug(data = yld_xs, 
+           aes(x = yield_xs, y = 0, color = rot2, group = rot2),
+           alpha = 0.5, position = "jitter", 
+           sides = "b") +
+  scale_color_manual(values = c("Continuous Maize" = "darkblue",
+                                "Rotated Maize" = "orange2")) +
+  labs(color = NULL,
+       y = yldlab,
+       x = nfertlab,
+       title = "(A)") +
+  guides(color = F) +
+  theme_bw() + 
+  theme(legend.position = "top") + 
+  #theme(legend.position = c(0.2, 0.9)) + 
+  theme(
+    axis.text = element_text(size = rel(1.2)),
+    axis.title = element_text(size = rel(1.2)),
+    legend.text = element_text(size = rel(1.3)),
+    legend.background = element_rect(color = "black"),
+    plot.title = element_text(size = rel(1.5), face = "bold"))
 
 
 
@@ -160,5 +257,26 @@ yield_fig <-
 
 #--not working, i give up
 (yield_fig / leach_fig) | buff_fig 
-
 ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_yld-lch-buff-9-11-20.png")
+
+
+#--trying with boxplots
+(yield_fig2 + yield_fig + leach_fig2 + leach_fig + plot_layout(ncol = 1, heights = c(1, 4, 1, 4))) |buff_fig
+
+ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_yld-lch-buff-9-14-20.png")
+
+
+
+#--trying with only aonr boxplots?
+(yield_fig + yield_fig2 + leach_fig + plot_layout(ncol = 1, heights = c(4, 1, 4))) |buff_fig
+
+ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_yld-lch-buff-9-14-20-v2.png")
+
+
+
+#--yield rug?
+(yield_rug + leach_rug + plot_layout(ncol = 1, heights = c(4, 4))) |buff_fig
+
+ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_yld-lch-buff-9-14-20-v3.png")
+
+
