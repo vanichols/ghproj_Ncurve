@@ -71,6 +71,35 @@ lmod3a <- update(lmod2,
                groups = ~ site_id/eu)
 
 
+
+## Parameter values and contrast among groups
+emmeans(lmod3a, ~ rotation, param = "a")
+contrast(emmeans(lmod3a, ~ rotation, param = "a"), "pairwise")
+emmeans(lmod3a, ~ 1, param = "a")
+
+
+intervals(lmod3a)
+emmeans(lmod3a, ~ site, param = "a")
+contrast(emmeans(lmod3a, ~ rotation, param = "a"), "pairwise")
+emmeans(lmod3a, ~ 1, param = "a")
+
+
+
+emmeans(lmod3a, ~ rotation, param = "b")
+contrast(emmeans(lmod3a, ~ rotation, param = "b"), "pairwise")
+
+emmeans(lmod3a, ~ rotation, param = "xs")
+contrast(emmeans(lmod3a, ~ rotation, param = "xs"), "pairwise")
+
+emmeans(lmod3a, ~ rotation, param = "c")
+contrast(emmeans(lmod3a, ~ rotation, param = "c"), "pairwise")
+
+## Contrasts
+#--a doesn't vary by rotation. We saw above it is more depenedent upon the site?
+#--all of these do depend on rotation: 
+
+
+
 # use model to make preds -------------------------------------------------
 
 #-make predictions so I can make graphs
