@@ -133,29 +133,29 @@ dat3 %>%
 #--leaching
 
 leach <- 
-  dat3 %>% 
-    select(site_id, year, rotation, leaching_kgha, nrate_kgha) %>% 
+  dat4 %>% 
+    select(site_id, year, rotation, crop, leaching_kgha, nrate_kgha) %>% 
   arrange(site_id, year, nrate_kgha)
 
 
 leach %>%
   filter(site_id == 'gent') %>% 
-  ggplot(., aes(nrate_kgha, leaching_kgha)) +
+  ggplot(., aes(nrate_kgha, leaching_kgha, color = crop)) +
   geom_point(size = 2) +
   geom_line() +
   facet_grid(rotation ~ year) +
-  labs(title = "corn") + 
+  labs(title = "leaching") + 
   theme(axis.text.x = element_text(angle = 90))
 
 plots <-
   leach %>%
   split(.$site_id) %>%
   map( ~ (
-    ggplot(., aes(nrate_kgha, leaching_kgha)) +
+    ggplot(., aes(nrate_kgha, leaching_kgha, color = crop)) +
       geom_point(size = 2) +
       geom_line() +
       facet_grid(rotation ~ year) +
-      labs(title = "corn") + 
+      labs(title = "leaching") + 
       theme(axis.text.x = element_text(angle = 90))
     
   ))
