@@ -10,6 +10,7 @@ library(tidyverse)
 library(stringr)
 library(janitor)
 library(readxl)
+#remotes::install_github("vanichols/saapsim")
 library(saapsim)
 library(purrr)
 
@@ -18,23 +19,24 @@ library(purrr)
 #data ------------------------------------------------------------
 #note: read in data directly from box folder, it will change
 
-# mydir <- "../../../Box/1_Gina_Projects/proj_Ncurve/Out Files 2020.6.10/"
+
+# mydir <- "../../../Box/1_Gina_Projects/proj_Ncurve/Out_Files_20201006/"
 # 
 # #--CC
 # cc <-
-#   saf_readapout(fold_dir = paste0(mydir, "CC Out Files/")) %>%
+#   saf_readapout(fold_dir = paste0(mydir, "CC_Out_Files/")) %>%
 #   filter(file != "raw", file != "outs") %>%
 #   mutate(rotation = "cc")
 # 
 # #--SC
 # sc <-
-#   saf_readapout(fold_dir = paste0(mydir, "SC Out Files/")) %>%
+#   saf_readapout(fold_dir = paste0(mydir, "SC_Out_Files/")) %>%
 #   filter(file != "raw", file != "outs") %>%
 #   mutate(rotation = "sc")
 # 
 # #--CS
 # cs <-
-#   saf_readapout(fold_dir = paste0(mydir, "CS Out Files/")) %>%
+#   saf_readapout(fold_dir = paste0(mydir, "CS_Out_Files/")) %>%
 #   filter(file != "raw", file != "outs") %>%
 #   mutate(rotation = "cs")
 # 
@@ -42,9 +44,12 @@ library(purrr)
 #   select(-path)
 
 #--so you don't have to read them in every time you want to change something
-#write_rds(dat, "01_proc-raw-outs/pro_rawapdat.rds")
+write_rds(dat, "01_proc-raw-outs/pro_rawapdat.rds")
+#
 
-dat <- read_rds("01_proc-raw-outs/pro_rawapdat.rds")
+#--eliminate the things we've decided not to use
+dat <- read_rds("01_proc-raw-outs/pro_rawapdat.rds") %>% 
+  select(-date, -annual_rain_mm, -inseason_rain_mm, -drainage_mm, -nitrateflow_mg_l, -nyear, -doy)
 
 #--pull out site from file name
 dat2 <- 
@@ -72,59 +77,100 @@ dat4 <-
   dat3 %>% 
   filter(site_id != "suth")
 
-write_csv(dat4, "01_proc-raw-outs/pro_apdat.csv")
-
-
-
-# other -------------------------------------------------------------------
-
-
-
-#--make data for Phil Dixon
-#--leaching only, cs clarified
-dat4 <- 
-  dat3 %>%
-  select(year, rotation, site_id, nrate_kgha, leaching_kgha) %>% 
-  mutate(rotation = ifelse(rotation == "sc", "cs", rotation)) %>% 
-  arrange(year, rotation, site_id, nrate_kgha)
-
-dat4 %>% 
-  mutate_if(is.character, as.factor) %>% 
-  mutate(year = as.factor(year))
-  summary()
-
-str(
+# this is tricky. I need to separate the leaching from teh other data for this
+###---leaching
+dleach4 <- 
   dat4 %>% 
-    mutate_if(is.character, as.factor) %>% 
-    mutate(year = as.factor(year)))
+  select(site_id, nrate_kgha, rotation, crop, year, pre_leaching_kgha, in_leaching_kgha, post_leaching_kgha)
 
-dat4 %>% 
-  ggplot(aes(nrate_kgha, leaching_kgha)) + 
-  geom_point()
+#--calculate leaching from sowing to sowing
+dleach5 <- 
+  dleach4 %>% 
+  arrange(site_id, rotation, nrate_kgha, year) %>% 
+  group_by(site_id, nrate_kgha, rotation) %>% 
+  mutate(pre_lead = dplyr::lead(pre_leaching_kgha, n = 1, default = NA),
+         nyear_leach_kgha = pre_lead + in_leaching_kgha + post_leaching_kgha) %>% 
+  select(-pre_leaching_kgha, -in_leaching_kgha, -post_leaching_kgha, -pre_lead) %>% 
+  ungroup()
 
-write_csv(dat4, "01_proc-raw-outs/pro_lunchinators.csv")
+#--find first year of simulation, if it's soybean we want to eliminate it
+dleach6 <- 
+  dleach5 %>%
+  select(year, site_id, rotation, crop, nyear_leach_kgha, nrate_kgha) %>% 
+  group_by(site_id, rotation) %>% 
+  mutate(minyear = min(year),
+         getridof = ifelse( (minyear == year & crop == "soy"), "x", "keep")) %>% 
+  filter(getridof != "x") %>% 
+  select(-minyear, -getridof)
+  
+#--make a year to group by and sum
+dleach7 <- 
+  dleach6 %>% 
+  mutate(yearleach_id = ifelse(crop == "corn", year, year-1)) %>% 
+  group_by(yearleach_id, site_id, rotation, nrate_kgha) %>% 
+  summarise(nyear_leach_kgha_tot = sum(nyear_leach_kgha)) %>% 
+  rename(year = "yearleach_id")
+  
 
-#--hoffman 2004 only had 96 mm of in-season rain?! but only for cc?
-#--addressed
-dat3 %>% 
-  filter(inseason_rain_mm < 250) %>% 
-  select(site_id, rotation, everything())
+dat5 <- 
+  dat4 %>%
+  left_join(dleach7) %>% 
+  select(site_id, rotation, crop, nrate_kgha, year, leaching_kgha, nyear_leach_kgha_tot, everything())
+  
 
-dat3 %>% 
-  filter(site_id == "hoff", year == 2004, rotation != "cc") %>% 
-  select(site_id, rotation, everything())
+write_csv(dat5, "01_proc-raw-outs/pro_apdat.csv")
 
-#--rand has 1038 of in-season rain, and 1201 of annual rain
-dat3 %>% 
-  filter(inseason_rain_mm > 1000) %>% 
-  select(site_id, everything())
 
-#--gold? 
-dat3 %>%
-  filter(site_id == "gold") %>% 
-  filter(inseason_rain_mm < 300) %>% 
-  select(site_id, rotation, everything())
 
+# # other -------------------------------------------------------------------
+# 
+# 
+# 
+# #--make data for Phil Dixon
+# #--leaching only, cs clarified
+# dat4 <- 
+#   dat3 %>%
+#   select(year, rotation, site_id, nrate_kgha, leaching_kgha) %>% 
+#   mutate(rotation = ifelse(rotation == "sc", "cs", rotation)) %>% 
+#   arrange(year, rotation, site_id, nrate_kgha)
+# 
+# dat4 %>% 
+#   mutate_if(is.character, as.factor) %>% 
+#   mutate(year = as.factor(year))
+#   summary()
+# 
+# str(
+#   dat4 %>% 
+#     mutate_if(is.character, as.factor) %>% 
+#     mutate(year = as.factor(year)))
+# 
+# dat4 %>% 
+#   ggplot(aes(nrate_kgha, leaching_kgha)) + 
+#   geom_point()
+# 
+# write_csv(dat4, "01_proc-raw-outs/pro_lunchinators.csv")
+# 
+# #--hoffman 2004 only had 96 mm of in-season rain?! but only for cc?
+# #--addressed
+# dat3 %>% 
+#   filter(inseason_rain_mm < 250) %>% 
+#   select(site_id, rotation, everything())
+# 
+# dat3 %>% 
+#   filter(site_id == "hoff", year == 2004, rotation != "cc") %>% 
+#   select(site_id, rotation, everything())
+# 
+# #--rand has 1038 of in-season rain, and 1201 of annual rain
+# dat3 %>% 
+#   filter(inseason_rain_mm > 1000) %>% 
+#   select(site_id, everything())
+# 
+# #--gold? 
+# dat3 %>%
+#   filter(site_id == "gold") %>% 
+#   filter(inseason_rain_mm < 300) %>% 
+#   select(site_id, rotation, everything())
+# 
 
 # look at it --------------------------------------------------------------
 #--use pwalk to make a fig for each site
