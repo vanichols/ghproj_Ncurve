@@ -10,8 +10,10 @@ rm(list = ls())
 library(tidyverse)
 library(ggridges)
 
-clr1 <- "orange2"
-clr2 <- "darkblue"
+
+clr1 <- "#2a89c3"#"orange2"
+clr2 <- "#fdb462" #"darkblue"
+
 
 
 # data --------------------------------------------------------------------
@@ -64,5 +66,5 @@ aonr %>%
   theme_bw() +
   theme(legend.position = "top")
 
-ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_aonr-9-14-20.png")
+ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_aonr-10-09-20.png")
 

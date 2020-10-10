@@ -5,6 +5,7 @@
 #               6/17/2020 look at soils data
 #               8/20/2020 (removed sutherland, checking)
 #               9/14/2020 (make it look nice)
+#               10/9/2020 (this won't work any more, no soybean...)
 
 library(tidyverse)
 library(plotly)

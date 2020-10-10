@@ -27,19 +27,19 @@ library(broom)
 
 dat <- 
   read_csv("01_proc-raw-outs/pro_apdat.csv") %>% 
+  filter(!is.na(nyear_leach_kgha_tot)) %>% 
+  filter(crop != "soy") %>% 
   arrange(site_id, year, nrate_kgha) %>%
   mutate(yearF = as.factor(year),
          rotation = dplyr::recode(rotation,
                                   "sc" = "cs"),
          rotation = as.factor(rotation)) %>%
   select(nrate_kgha, everything()) %>% 
-  pivot_longer(annual_rain_mm:yield_maize_buac) %>% 
-  select(-date, -doy)
+  pivot_longer(leaching_kgha:yield_maize_buac) 
 
 leach <- 
   dat %>% 
-  filter(name == "leaching_kgha") %>% 
-  filter(crop == "corn")
+  filter(name == "nyear_leach_kgha_tot")
 
 leach1 <- 
   leach %>%
@@ -73,34 +73,85 @@ lmod3a <- update(lmod2,
 
 
 ## Parameter values and contrast among groups
-emmeans(lmod3a, ~ rotation, param = "a")
-contrast(emmeans(lmod3a, ~ rotation, param = "a"), "pairwise")
+em_a <- 
+  tidy(emmeans(lmod3a, ~ rotation, param = "a")) %>% 
+  mutate(parameter = "a")
+con_a <- tidy(contrast(emmeans(lmod3a, ~ rotation, param = "a"), "pairwise")) %>% 
+  mutate(parameter = "a")
+
 emmeans(lmod3a, ~ 1, param = "a")
-
-
 intervals(lmod3a)
-emmeans(lmod3a, ~ site, param = "a")
-contrast(emmeans(lmod3a, ~ rotation, param = "a"), "pairwise")
-emmeans(lmod3a, ~ 1, param = "a")
 
 
+em_b <- tidy(emmeans(lmod3a, ~ rotation, param = "b")) %>% 
+  mutate(parameter = "b")
+con_b <- tidy(contrast(emmeans(lmod3a, ~ rotation, param = "b"), "pairwise")) %>% 
+  mutate(parameter = "b")
 
-emmeans(lmod3a, ~ rotation, param = "b")
-contrast(emmeans(lmod3a, ~ rotation, param = "b"), "pairwise")
+em_xs <- tidy(emmeans(lmod3a, ~ rotation, param = "xs")) %>% 
+  mutate(parameter = "xs")
+con_xs <- tidy(contrast(emmeans(lmod3a, ~ rotation, param = "xs"), "pairwise")) %>% 
+  mutate(parameter = 'xs')
 
-emmeans(lmod3a, ~ rotation, param = "xs")
-contrast(emmeans(lmod3a, ~ rotation, param = "xs"), "pairwise")
+em_c <- tidy(emmeans(lmod3a, ~ rotation, param = "c")) %>% 
+  mutate(parameter = "c")
+con_c <- tidy(contrast(emmeans(lmod3a, ~ rotation, param = "c"), "pairwise")) %>% 
+  mutate(parameter = "c")
 
-emmeans(lmod3a, ~ rotation, param = "c")
-contrast(emmeans(lmod3a, ~ rotation, param = "c"), "pairwise")
+ems <- 
+  em_a %>% 
+  bind_rows(em_b) %>% 
+  bind_rows(em_xs) %>% 
+  bind_rows(em_c) %>% 
+  select(-p.value)
+
+ems %>% write_csv("02_fit-curves/fc_blin-leach-rotation-estimates.csv")
+
+cons <- 
+  con_a %>% 
+  bind_rows(con_b) %>% 
+  bind_rows(con_xs) %>% 
+  bind_rows(con_c) %>% 
+  mutate(p.value = round(p.value, 3))
+
+cons %>% write_csv("02_fit-curves/fc_blin-leach-rotation-contrasts.csv")
+
 
 ## Contrasts
 #--a doesn't vary by rotation. We saw above it is more depenedent upon the site?
 #--all of these do depend on rotation: 
 
 
-
 # use model to make preds -------------------------------------------------
+
+# just get estimates for each value
+coef_est <- 
+  coef(lmod3a, effects = "random") %>% 
+  rownames_to_column() %>% 
+  as_tibble() %>% 
+  separate(rowname, into = c("site", "x", "year", "rotation")) %>% 
+  pivot_longer(cols = 5:12, names_to = "term", values_to = "estimate") %>% 
+  mutate(term2 = str_sub(term, 1, 2),
+                  term2 = str_replace_all(term2, "[[:punct:]]", ""),
+                  termrot = ifelse(grepl("cs", term), "csterm", "ccterm")) %>%
+  select(-term) %>%
+  pivot_wider(names_from = termrot,
+              values_from = estimate) %>%
+  mutate(est = ifelse(rotation == "cs", ccterm + csterm, ccterm)) %>%
+  select(-ccterm, -csterm, -x) %>%
+  pivot_wider(names_from = term2, values_from = est)
+         
+
+coef_est %>% write_csv("02_fit-curves/fc_blin-leach-parms-mm.csv")
+
+
+pred_dat <- 
+  leachG %>% 
+  select(yearF, rotation, site_id, eu) %>% 
+  expand_grid(., nrates) %>% 
+  rename(nrate_kgha = nrates) %>% 
+  mutate(preds = predict(lmod3a, newdata = .))
+
 
 #-make predictions so I can make graphs
 

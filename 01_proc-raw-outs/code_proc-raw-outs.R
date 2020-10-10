@@ -6,6 +6,8 @@
 #               7/26/2020 (add soybean back into processed data)
 #               8/20/2020 (remove sutherland from analysis)
 
+rm(list = ls())
+
 library(tidyverse)
 library(stringr)
 library(janitor)
@@ -44,8 +46,8 @@ library(purrr)
 #   select(-path)
 
 #--so you don't have to read them in every time you want to change something
-write_rds(dat, "01_proc-raw-outs/pro_rawapdat.rds")
-#
+#write_rds(dat, "01_proc-raw-outs/pro_rawapdat.rds")
+
 
 #--eliminate the things we've decided not to use
 dat <- read_rds("01_proc-raw-outs/pro_rawapdat.rds") %>% 
@@ -70,14 +72,31 @@ dat3 <-
   filter(year >= 2000) %>% 
   #--remove hoff year 2012
   filter( ! (year == 2012 & site_id == "hoff")) %>% 
-  rename(nrate_kgha = n_rate_kgha)
+  rename(nrate_kgha = n_rate_kgha) %>% 
+  select(site_id, year, nrate_kgha, rotation, crop, everything())
+
 
 #--remove sutherland from analysis (8/20/2020, see 20200819_Qs in Heather Box folder)
 dat4 <- 
   dat3 %>% 
-  filter(site_id != "suth")
+  filter(site_id != "suth") 
 
 # this is tricky. I need to separate the leaching from teh other data for this
+# create a small dummy set
+
+# dat4 %>% 
+#   arrange(site_id, year, nrate_kgha, rotation, crop, nrate_kgha) %>% 
+#   group_by(site_id, nrate_kgha, rotation, crop) %>% 
+#   do(head(., n = 5)) %>% 
+#   slice(1:10) %>% 
+#   arrange(site_id, rotation, nrate_kgha, year) %>% 
+#   group_by(site_id, nrate_kgha, rotation) %>% 
+#   mutate(pre_lead = dplyr::lead(pre_leaching_kgha, n = 1, default = NA),
+#          nyear_leach_kgha = pre_lead + in_leaching_kgha + post_leaching_kgha) %>% 
+#   select(-pre_leaching_kgha, -in_leaching_kgha, -post_leaching_kgha, -pre_lead) %>% 
+#   ungroup()
+# 
+
 ###---leaching
 dleach4 <- 
   dat4 %>% 
