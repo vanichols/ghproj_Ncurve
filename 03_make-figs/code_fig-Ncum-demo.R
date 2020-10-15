@@ -22,11 +22,17 @@ myplantday <- saf_date_to_doy("2001-05-01")
 #note: read in data directly from box folder, it will change
 
 # what year is corn in the CS  - 1995 is a corn year
+# so 2001 must be corn
+
 
 datraw <- saf_readapout("../../../Box/1_Gina_Projects/proj_Ncurve/Daily_Out_Files_20201009/") %>% 
   separate(file, into = c("site", "rot", "nrate")) %>% 
   select(site, rot, nrate, date, year, subsurface_drain_no3, crop_buac_maize)  %>% 
   rename(leaching_kgha = subsurface_drain_no3) 
+
+datraw %>% 
+  filter(year == 2001) %>% 
+  mutate(max = max(crop_buac_maize))
 
 datraw %>% 
   ggplot(aes(date, leaching_kgha)) + 
@@ -36,7 +42,8 @@ datraw %>%
 
 dat <- 
   datraw %>% 
-  filter(year %in% c(1995, 1996, 1997, 1998))
+  filter(year %in% c(1995, 1996, 1997, 1998)) #%>% 
+  #filter(year %in% c(2001, 2002, 2003, 2004))
 
 
 
@@ -59,6 +66,8 @@ dat_rot <-
     nyear2 = case_when(
       (rot == "CS") & (nyear == 1996) ~ 1995,
       (rot == "CS") & (nyear == 1998) ~ 1997,
+      (rot == "CS") & (nyear == 2002) ~ 2001,
+      (rot == "CS") & (nyear == 2004) ~ 2003,
       TRUE ~ nyear)
     ) %>%
   group_by(site, rot, nrate, nyear2) %>% 
@@ -72,14 +81,18 @@ dat_crop %>%
     dat_rot %>% 
       select(site, rot, nrate, year, date, doy, leach_cumsum_rot)
   ) %>% 
-  mutate(leach_cumsum_crop = ifelse((doy < 105 & year == 1995), NA, leach_cumsum_crop),
-         leach_cumsum_rot = ifelse((doy < 105 & year == 1995), NA, leach_cumsum_rot)) %>% 
+  mutate(
+    leach_cumsum_crop = ifelse((doy < 105 & year == 1995), NA, leach_cumsum_crop),
+    leach_cumsum_rot = ifelse((doy < 105 & year == 1995), NA, leach_cumsum_rot),
+    leach_cumsum_crop = ifelse((doy < 105 & year == 2001), NA, leach_cumsum_crop),
+    leach_cumsum_rot = ifelse((doy < 105 & year == 2001), NA, leach_cumsum_rot)
+    ) %>% 
   ggplot(aes(date, leach_cumsum_crop)) + 
   geom_line(color = "blue") + 
   geom_line(aes(date, leach_cumsum_rot), color = "red") + 
   facet_grid(.~rot)
 
-plant_days <- 
+plant_days <-
   tibble(rot = c("Continuous Maize", "Maize/Soybean Rotation", "Maize/Soybean Rotation"),
        crop = c("Maize", "Maize", "Soybean"),
        pdate1 = c("1995-05-01", "1995-05-01", NA),
@@ -87,10 +100,19 @@ plant_days <-
        pdate3 = c("1997-05-01", "1997-05-01", NA),
        pdate4 = c("1998-05-01", NA, "1998-05-01"))
 
+# plant_days <- 
+#   tibble(rot = c("Continuous Maize", "Maize/Soybean Rotation", "Maize/Soybean Rotation"),
+#          crop = c("Maize", "Maize", "Soybean"),
+#          pdate1 = c("2001-05-01", "2001-05-01", NA),
+#          pdate2 = c("2002-05-01", NA, "2002-05-01"),
+#          pdate3 = c("2003-05-01", "2003-05-01", NA),
+#          pdate4 = c("2004-05-01", NA, "2004-05-01"))
 
 
 dat_rot %>%   
-  mutate(leach_cumsum_rot = ifelse((doy < myplantday & year == 1995), NA, leach_cumsum_rot),
+  mutate(
+    leach_cumsum_rot = ifelse((doy < myplantday & year == 1995), NA, leach_cumsum_rot),
+    leach_cumsum_rot = ifelse((doy < myplantday & year == 2001), NA, leach_cumsum_rot),
          rot = case_when(
            rot == "CC" ~ "Continuous Maize",
          rot == "CS" ~ "Maize/Soybean Rotation")
