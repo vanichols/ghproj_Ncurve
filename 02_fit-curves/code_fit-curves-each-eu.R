@@ -23,7 +23,9 @@ dat <-
          rotation = dplyr::recode(rotation,                                                                "sc" = "cs")) %>% 
   mutate(eu = paste0(site_id,"_", year, rotation)) %>% #--add an eu identifier
   mutate(site_id = as.factor(site_id),
-         rotation = as.factor(rotation))
+         rotation = as.factor(rotation)) %>% 
+  filter(!is.na(nyear_leach_kgha_tot)) %>% 
+  select(eu, site_id, rotation, yearF, crop, nrate_kgha, nyear_leach_kgha_tot, yield_maize_buac)
 
 
 dat %>% 
@@ -37,8 +39,9 @@ unique(dat$site_id)
 
 leach <- 
   dat %>% 
-  select(nrate_kgha, everything(), -date, -doy) %>% 
-  pivot_longer(annual_rain_mm:yield_maize_buac) %>%
+  select(eu, everything()) %>% 
+  rename("leaching_kgha" = nyear_leach_kgha_tot) %>% 
+  pivot_longer(leaching_kgha:yield_maize_buac) %>%
   filter(name == "leaching_kgha")
 
 #--build functions
@@ -74,7 +77,8 @@ leach_aic <-
   filter(is_null == 0) %>%  
   unnest(cols = c(blin, expf, explin)) 
 
-
+leach_aic %>% 
+  filter(is_null == "TRUE")
 
 leach_aic %>%
   select(eu, blin, expf, explin) %>% 
