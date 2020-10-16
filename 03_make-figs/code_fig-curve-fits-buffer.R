@@ -87,7 +87,7 @@ buff_fig <-
   labs(fill = NULL,
        y = bufflab,
        x = NULL,
-       title = "(A)") +
+       title = "(a)") +
   guides(color = F,
          fill = F) +
   theme_bw() +
@@ -168,7 +168,7 @@ leach_rug <-
   labs(color = NULL,
        y = nleachlab,
        x = nfertlab,
-       title = "(C)") +
+       title = "(c)") +
   theme_bw() + 
   guides(color = F) +
   theme(legend.position = c(0.2,0.9),
@@ -248,7 +248,7 @@ yield_rug <-
   labs(color = NULL,
        y = yldlab,
        x = nfertlab,
-       title = "(B)") +
+       title = "(b)") +
   guides(color = F) +
   theme_bw() + 
   theme(legend.position = "top") + 
@@ -295,4 +295,4 @@ yield_rug <-
 
 
 buff_fig | (yield_rug + leach_rug + plot_layout(ncol = 1, heights = c(4, 4)))
-ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_yld-lch-buff-10-09-20-v3.png")
+ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_yld-lch-buff-10-16-20.png")
