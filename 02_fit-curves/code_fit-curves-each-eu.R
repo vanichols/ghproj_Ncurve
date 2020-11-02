@@ -84,7 +84,12 @@ leach_aic %>%
   select(eu, blin, expf, explin) %>% 
   pivot_longer(blin:explin) %>% 
   ggplot(aes(eu, value)) +
-  geom_point(aes(color = name))
+  geom_point(aes(color = name)) + 
+  labs(x = "Experimental Unit",
+       y = "AIC value") + 
+  theme(axis.text.x = element_blank())
+
+ggsave("02_fit-curves/fig_aic-vals.png")
 
 #--what % is blin best? etc
 leach_aic %>%
