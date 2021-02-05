@@ -3,6 +3,7 @@
 # purpose: explore relationship between yield and leaching parms
 # last updated: 7/9/2020 fixed coefs
 #               8/20/2020 removed sutherland
+#               2/4/2021 made edits
 
 rm(list = ls())
 
@@ -12,11 +13,12 @@ library(tidyverse)
 library(patchwork)
 library(scales)
 library(ggridges)
+#install.packages("remotes")
+#remotes::install_github("daattali/colourpicker")
 
 
-
-clr1 <- "#2a89c3"#"orange2"
-clr2 <- "#fdb462" #"darkblue"
+clr1 <- "#2a89c3"#"darkblue"
+clr2 <- "#fdb462" #"orange2"
 
 
 
@@ -58,7 +60,8 @@ leach_xs <-
 buff <- 
   yld_xs %>% 
   left_join(leach_xs) %>% 
-  mutate(yld_to_lch = leach_xs - yield_xs) 
+  mutate(yld_to_lch = leach_xs - yield_xs) %>% 
+  select(-leach_xs, -yield_xs)
 
 buff_mean <- 
   buff %>% 
@@ -83,7 +86,8 @@ buff_fig <-
   geom_hpline(width = 0.05, size = 0.5, color = "gray20") +
   geom_hpline(data = buff_mean, width = 0.2, size = 2) +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  scale_fill_manual(values = c(clr2, clr1)) +
+  scale_fill_manual(values = c("Continuous Maize" = clr2, 
+                               "Rotated Maize" = clr1)) +
   labs(fill = NULL,
        y = bufflab,
        x = NULL,
@@ -98,6 +102,90 @@ buff_fig <-
         plot.title = element_text(size = rel(1.5), face = "bold"))
 
 buff_fig
+
+buff %>% 
+  mutate(rot = as.character(rotation),
+         rot2 = dplyr::recode(rot,
+                              "cc" = "Continuous Maize",                        
+                              "cs" = "Rotated Maize")) %>%
+  select(-rotation, -rot) %>% 
+  pivot_wider(names_from = rot2, values_from = yld_to_lch) %>% 
+  ggplot(aes(x=x)) +
+  geom_point(data = buff_mean, x = -0.0025, aes(y = yld_to_lch, fill = rot2), pch = 22, size = 5) +
+  geom_density(aes(y = `Continuous Maize`,x = -..density..), fill = clr2) +
+  geom_density(aes(y = `Rotated Maize`,x = ..density..), fill = clr1) + 
+  geom_hpline(x = -0.0005, aes(y = `Continuous Maize`), width = 0.001, color = "#D2691E", size = 0.5) +
+  geom_hpline(x = 0.0005, aes(y = `Rotated Maize`), width = 0.001, color = "#165B85", size = 0.5) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hpline(data = buff_mean %>% filter(rot == "cc"), 
+              x = -0.0025, aes(y = yld_to_lch), width = 0.005, size = 2, 
+              color = "#D2691E") +
+  geom_hpline(data = buff_mean %>% filter(rot == "cs"), 
+              x = 0.0025, aes(y = yld_to_lch), width = 0.005, size = 2,
+              color = "#165B85") +
+  scale_fill_manual(values = c("Continuous Maize" = clr2, 
+                               "Rotated Maize" = clr1)) +
+  labs(fill = NULL,
+       y = bufflab,
+       x = "Data Density",
+       title = "(a)") +
+  # guides(color = F,
+  #        fill = F) +
+  theme_bw() +
+  theme(axis.text = element_text(size = rel(1.2)),
+        axis.text.x = element_blank(),
+        axis.title = element_text(size = rel(1.3)),
+        legend.position = c(0.1, 0.9),
+        legend.direction = "vertical",
+        legend.justification = c(0.2, 0.8),
+        legend.background = element_rect(color = "black"),
+        legend.text = element_text(size = rel(1.3)),
+        plot.title = element_text(size = rel(1.5), face = "bold"))
+
+#--a new buff fig
+buff_fig <- 
+  buff %>% 
+  mutate(rot = as.character(rotation),
+         rot2 = dplyr::recode(rot,
+                              "cc" = "Continuous Maize",                        
+                              "cs" = "Rotated Maize")) %>%
+  select(-rotation, -rot) %>% 
+  pivot_wider(names_from = rot2, values_from = yld_to_lch) %>% 
+  ggplot(aes(x=x)) +
+  geom_point(data = buff_mean, x = -0.0025, aes(y = yld_to_lch, fill = rot2), pch = 22, size = 5) +
+  geom_density(aes(y = `Continuous Maize`,x = -..density..), fill = clr2) +
+  geom_density(aes(y = `Rotated Maize`,x = ..density..), fill = clr1) + 
+  geom_hpline(x = -0.0005, aes(y = `Continuous Maize`), width = 0.001, color = "#D2691E", size = 0.5) +
+  geom_hpline(x = 0.0005, aes(y = `Rotated Maize`), width = 0.001, color = "#165B85", size = 0.5) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hpline(data = buff_mean %>% filter(rot == "cc"), 
+              x = -0.0025, aes(y = yld_to_lch), width = 0.005, size = 2, 
+              color = "#D2691E") +
+  geom_hpline(data = buff_mean %>% filter(rot == "cs"), 
+              x = 0.0025, aes(y = yld_to_lch), width = 0.005, size = 2,
+              color = "#165B85") +
+  scale_fill_manual(values = c("Continuous Maize" = clr2, 
+                               "Rotated Maize" = clr1)) +
+  labs(fill = NULL,
+       y = bufflab,
+       x = "Data Density",
+       title = "(a)") +
+  # guides(color = F,
+  #        fill = F) +
+  theme_bw() +
+  theme(axis.text = element_text(size = rel(1.2)),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = rel(1.3)),
+        legend.position = c(0.15, 0.95),
+        legend.direction = "vertical",
+        legend.justification = c(0.2, 0.8),
+        legend.background = element_rect(color = "black"),
+        legend.text = element_text(size = rel(1.3)),
+        plot.title = element_text(size = rel(1.5), face = "bold")) + 
+  coord_flip()
+
+
+
 
 # leaching curves ---------------------------------------------------------
 
