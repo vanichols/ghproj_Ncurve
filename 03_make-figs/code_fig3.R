@@ -10,7 +10,7 @@
 library(tidyverse)
 library(scales)
 library(ggridges)
-
+library(ggpubr)
 
 
 
@@ -27,35 +27,43 @@ rawdat <- read_csv("01_proc-raw-outs/pro_apdat.csv") %>%
          croprot = paste0(crop, rotation2)) %>% 
   select(croprot, everything())
 
+
 rawdat %>% 
-  mutate(nrateF = as.factor(nrate_kgha),
-         nrateF2 = factor(nrateF, levels = rev(levels(nrateF))),
-         croprotnice = dplyr::recode(croprot,
-                              corncc = "Continuous Maize",
-                              corncs = "Rotated Maize",
-                              soycs = "Rotated Soybean")) %>%
+  arrange(nrate_kgha) %>% 
+  mutate(
+    nrateF = paste(nrate_kgha, "kg N/ha"),
+    nrateF = fct_inorder(nrateF),
+    nrateF2 = factor(nrateF, levels = rev(levels(nrateF))),
+    croprotnice = dplyr::recode(croprot,
+                                     corncc = "Continuous Maize",
+                                     corncs = "Rotated Maize",
+                                     soycs = "Rotated Soybean")) %>%
   group_by(nrateF2, croprotnice) %>% 
   mutate(mnleach = mean(leaching_kgha)) %>% 
   ggplot(aes(x = leaching_kgha, y = nrateF2, fill = croprotnice)) +
   geom_density_ridges(alpha = 0.5) +
   geom_point(aes(x = mnleach, y = nrateF2), pch = 22, size = 3) +
   scale_fill_manual(values = c(clr1, clr2, clr3)) + 
-  labs(y = expression(Nitrogen~Feritilizer~Rate~(kg~N~ha^-1)),
+  labs(y = "Nitrogen Fertilizer Rate\n",
        x = expression(Nitrogen~Leaching~(kg~N~ha^-1)),
        fill = NULL) + 
   theme_bw() + 
   theme(axis.text = element_text(size = rel(1.2)),
+        axis.text.y = element_text(vjust = -1),
         axis.title = element_text(size = rel(1.3)),
         legend.justification = c(1, 1),
         legend.position = c(0.95,0.99),
         legend.background = element_blank(),
-        legend.text = element_text(size = rel(1.2))) + 
-  facet_grid(nrateF2~., scales = "free")
+        legend.text = element_text(size = rel(1.2)))
 
-ggsave("fig3_")
-#ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/manuscript/fig_n-leaching-9-14-2020.png")
+ggsave("fig3.png")
 
-rawdat %>% 
+
+# looks dumb --------------------------------------------------------------
+
+
+fig_dat <- 
+  rawdat %>% 
   mutate(nrateF = as.factor(nrate_kgha),
          nrateF2 = factor(nrateF, levels = rev(levels(nrateF))),
          croprotnice = dplyr::recode(croprot,
@@ -64,19 +72,33 @@ rawdat %>%
                                      soycs = "Rotated Soybean")) %>%
   group_by(nrateF2, croprotnice) %>% 
   mutate(mnleach = mean(leaching_kgha)) %>% 
-  ggplot(aes(x = leaching_kgha, fill = croprotnice)) +
-  geom_freqpoly() +
-  #geom_point(aes(x = mnleach, y = nrateF2), pch = 22, size = 3) +
-  scale_fill_manual(values = c(clr1, clr2, clr3)) + 
-  # labs(y = expression(Nitrogen~Feritilizer~Rate~(kg~N~ha^-1)),
-  #      x = expression(Nitrogen~Leaching~(kg~N~ha^-1)),
-  #      fill = NULL) + 
-  # theme_bw() + 
-  # theme(axis.text = element_text(size = rel(1.2)),
-  #       axis.title = element_text(size = rel(1.3)),
-  #       legend.justification = c(1, 1),
-  #       legend.position = c(0.95,0.99),
-  #       legend.background = element_blank(),
-  #       legend.text = element_text(size = rel(1.2))) + 
-  facet_grid(nrateF2~., scales = "free")
+  select(site_id, croprot, croprotnice, nrate_kgha, nrateF, nrateF2, leaching_kgha, mnleach)
 
+
+fig_dat %>%
+  arrange(nrate_kgha) %>% 
+  mutate(striplab = paste(nrate_kgha, "kg N/ha"),
+         striplab = fct_inorder(striplab),
+         striplab2 = fct_rev(striplab)) %>% 
+  ggplot(aes(leaching_kgha, fill = croprotnice)) +
+  geom_density_line(alpha = 0.5) +
+  geom_point(aes(x = mnleach, y = 0), pch = 22, size = 3) +
+  scale_fill_manual(values = c(clr1, clr2, clr3)) + 
+  labs(y = "Data Density",
+       x = expression(Nitrogen~Leaching~(kg~N~ha^-1)),
+       fill = NULL) +
+  theme_bw() +
+  theme_pubclean() +
+  theme(axis.text.x = element_text(size = rel(1.2)),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = rel(1.3)),
+        strip.text = element_text(size = rel(1.3)),
+        #legend.justification = c(1, 1),
+        legend.position = "right",
+        legend.direction = "vertical",
+        legend.background = element_blank(),
+        legend.text = element_text(size = rel(1.2))) +
+  facet_wrap(~striplab2, ncol = 1, strip.position = "top") + 
+  coord_cartesian(xlim = c(0, 250))
+
+ggsave("fig3_dumb.png")
