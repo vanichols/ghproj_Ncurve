@@ -27,6 +27,7 @@ rawdat <- read_csv("01_proc-raw-outs/pro_apdat.csv") %>%
          croprot = paste0(crop, rotation2)) %>% 
   select(croprot, everything())
 
+#--original
 
 rawdat %>% 
   arrange(nrate_kgha) %>% 
@@ -35,9 +36,9 @@ rawdat %>%
     nrateF = fct_inorder(nrateF),
     nrateF2 = factor(nrateF, levels = rev(levels(nrateF))),
     croprotnice = dplyr::recode(croprot,
-                                     corncc = "Continuous Maize",
-                                     corncs = "Rotated Maize",
-                                     soycs = "Rotated Soybean")) %>%
+                                corncc = "Continuous Maize",
+                                corncs = "Rotated Maize",
+                                soycs = "Rotated Soybean")) %>%
   group_by(nrateF2, croprotnice) %>% 
   mutate(mnleach = mean(leaching_kgha)) %>% 
   ggplot(aes(x = leaching_kgha, y = nrateF2, fill = croprotnice)) +
@@ -57,6 +58,58 @@ rawdat %>%
         legend.text = element_text(size = rel(1.2)))
 
 ggsave("fig3.png")
+
+#--move labels
+nlabs <- 
+  rawdat %>% 
+  arrange(nrate_kgha) %>% 
+  mutate(
+    nrateF = paste(nrate_kgha, "kg N/ha"),
+    nrateF = fct_inorder(nrateF),
+    nrateF2 = factor(nrateF, levels = rev(levels(nrateF))),
+    croprotnice = dplyr::recode(croprot,
+                                corncc = "Continuous Maize",
+                                corncs = "Rotated Maize",
+                                soycs = "Rotated Soybean")) %>% 
+  filter(croprotnice == "Rotated Maize") %>% 
+  select(nrate_kgha, croprotnice, nrateF, nrateF2) %>% 
+  distinct()
+
+rawdat %>% 
+  arrange(nrate_kgha) %>% 
+  mutate(
+    nrateF = paste(nrate_kgha, "kg N/ha"),
+    nrateF = fct_inorder(nrateF),
+    nrateF2 = factor(nrateF, levels = rev(levels(nrateF))),
+    croprotnice = dplyr::recode(croprot,
+                                     corncc = "Continuous Maize",
+                                     corncs = "Rotated Maize",
+                                     soycs = "Rotated Soybean")) %>%
+  group_by(nrateF2, croprotnice) %>% 
+  mutate(mnleach = mean(leaching_kgha)) %>% 
+  ggplot(aes(x = leaching_kgha, y = nrateF2, fill = croprotnice)) +
+  geom_density_ridges(alpha = 0.5) +
+  geom_point(aes(x = mnleach, y = nrateF2), pch = 22, size = 3) +
+  geom_label(data = nlabs, aes(x = 175, y = nrateF2, label = paste(nrate_kgha, "kg N/ha Fertilizer"),
+                               vjust = -1, hjust = 0),
+             fill = "white") +
+  # geom_label(data = nlabs, aes(x = -50, y = nrateF2, label = paste(nrate_kgha, "kg N/ha Fertilizer"),
+  #                              vjust = -2, hjust = 0),
+  #            fill = "white") +
+  scale_fill_manual(values = c(clr1, clr2, clr3)) + 
+  labs(y = "Data Density",
+       x = expression(Nitrogen~Leaching~(kg~N~ha^-1)),
+       fill = NULL) + 
+  theme_bw() + 
+  theme(axis.text = element_text(size = rel(1.2)),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = rel(1.3)),
+        legend.justification = c(1, 1),
+        legend.position = c(0.5,0.99),
+        legend.background = element_blank(),
+        legend.text = element_text(size = rel(1.2)))
+
+ggsave("fig3_stacked.png")
 
 
 # looks dumb --------------------------------------------------------------
@@ -102,3 +155,33 @@ fig_dat %>%
   coord_cartesian(xlim = c(0, 250))
 
 ggsave("fig3_dumb.png")
+
+
+fig_dat %>%
+  filter(nrate_kgha != 300) %>% 
+  arrange(nrate_kgha) %>% 
+  mutate(striplab = paste(nrate_kgha, "kg N/ha"),
+         striplab = fct_inorder(striplab),
+         striplab2 = fct_rev(striplab)) %>% 
+  ggplot(aes(leaching_kgha, fill = croprotnice)) +
+  geom_density_line(alpha = 0.5) +
+  geom_point(aes(x = mnleach, y = 0), pch = 22, size = 3) +
+  scale_fill_manual(values = c(clr1, clr2, clr3)) + 
+  labs(y = "Data Density",
+       x = expression(Nitrogen~Leaching~(kg~N~ha^-1)),
+       fill = NULL) +
+  theme_bw() +
+  theme_pubclean() +
+  theme(axis.text.x = element_text(size = rel(1.2)),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = rel(1.3)),
+        strip.text = element_text(size = rel(1.3)),
+        #legend.justification = c(0.2, 0.8),
+        legend.position = "top",
+        legend.direction = "horizontal",
+        legend.background = element_blank(),
+        legend.text = element_text(size = rel(1.2))) +
+  facet_wrap(~striplab2, ncol = 2, strip.position = "top") + 
+  coord_cartesian(xlim = c(0, 250))
+
+ggsave("fig3_panels.png")

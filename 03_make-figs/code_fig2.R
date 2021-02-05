@@ -101,9 +101,10 @@ buff_fig <-
         legend.text = element_text(size = rel(1.3)),
         plot.title = element_text(size = rel(1.5), face = "bold"))
 
-buff_fig
 
-buff %>% 
+#--mirrored
+buff_fig2 <- 
+  buff %>% 
   mutate(rot = as.character(rotation),
          rot2 = dplyr::recode(rot,
                               "cc" = "Continuous Maize",                        
@@ -135,15 +136,19 @@ buff %>%
   theme(axis.text = element_text(size = rel(1.2)),
         axis.text.x = element_blank(),
         axis.title = element_text(size = rel(1.3)),
-        legend.position = c(0.1, 0.9),
+        legend.position = c(0.55, 0.1),
         legend.direction = "vertical",
         legend.justification = c(0.2, 0.8),
-        legend.background = element_rect(color = "black"),
+        #legend.background = element_rect(color = "black"),
+        legend.background = element_blank(),
         legend.text = element_text(size = rel(1.3)),
         plot.title = element_text(size = rel(1.5), face = "bold"))
 
-#--a new buff fig
-buff_fig <- 
+
+buff_fig2
+
+#--not mirrored
+#buff_fig2 <- 
   buff %>% 
   mutate(rot = as.character(rotation),
          rot2 = dplyr::recode(rot,
@@ -153,7 +158,7 @@ buff_fig <-
   pivot_wider(names_from = rot2, values_from = yld_to_lch) %>% 
   ggplot(aes(x=x)) +
   geom_point(data = buff_mean, x = -0.0025, aes(y = yld_to_lch, fill = rot2), pch = 22, size = 5) +
-  geom_density(aes(y = `Continuous Maize`,x = -..density..), fill = clr2) +
+  geom_density(aes(y = `Continuous Maize`,x = ..density..), fill = clr2) +
   geom_density(aes(y = `Rotated Maize`,x = ..density..), fill = clr1) + 
   geom_hpline(x = -0.0005, aes(y = `Continuous Maize`), width = 0.001, color = "#D2691E", size = 0.5) +
   geom_hpline(x = 0.0005, aes(y = `Rotated Maize`), width = 0.001, color = "#165B85", size = 0.5) +
@@ -174,15 +179,61 @@ buff_fig <-
   #        fill = F) +
   theme_bw() +
   theme(axis.text = element_text(size = rel(1.2)),
-        axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
         axis.title = element_text(size = rel(1.3)),
-        legend.position = c(0.15, 0.95),
+        legend.position = c(0.55, 0.1),
         legend.direction = "vertical",
         legend.justification = c(0.2, 0.8),
-        legend.background = element_rect(color = "black"),
+        #legend.background = element_rect(color = "black"),
+        legend.background = element_blank(),
         legend.text = element_text(size = rel(1.3)),
         plot.title = element_text(size = rel(1.5), face = "bold")) + 
-  coord_flip()
+    coord_flip()
+
+
+buff_fig2
+
+#--a new buff fig
+# buff_fig <- 
+#   buff %>% 
+#   mutate(rot = as.character(rotation),
+#          rot2 = dplyr::recode(rot,
+#                               "cc" = "Continuous Maize",                        
+#                               "cs" = "Rotated Maize")) %>%
+#   select(-rotation, -rot) %>% 
+#   pivot_wider(names_from = rot2, values_from = yld_to_lch) %>% 
+#   ggplot(aes(x=x)) +
+#   geom_point(data = buff_mean, x = -0.0025, aes(y = yld_to_lch, fill = rot2), pch = 22, size = 5) +
+#   geom_density(aes(y = `Continuous Maize`,x = -..density..), fill = clr2) +
+#   geom_density(aes(y = `Rotated Maize`,x = ..density..), fill = clr1) + 
+#   geom_hpline(x = -0.0005, aes(y = `Continuous Maize`), width = 0.001, color = "#D2691E", size = 0.5) +
+#   geom_hpline(x = 0.0005, aes(y = `Rotated Maize`), width = 0.001, color = "#165B85", size = 0.5) +
+#   geom_hline(yintercept = 0, linetype = "dashed") +
+#   geom_hpline(data = buff_mean %>% filter(rot == "cc"), 
+#               x = -0.0025, aes(y = yld_to_lch), width = 0.005, size = 2, 
+#               color = "#D2691E") +
+#   geom_hpline(data = buff_mean %>% filter(rot == "cs"), 
+#               x = 0.0025, aes(y = yld_to_lch), width = 0.005, size = 2,
+#               color = "#165B85") +
+#   scale_fill_manual(values = c("Continuous Maize" = clr2, 
+#                                "Rotated Maize" = clr1)) +
+#   labs(fill = NULL,
+#        y = bufflab,
+#        x = "Data Density",
+#        title = "(a)") +
+#   # guides(color = F,
+#   #        fill = F) +
+#   theme_bw() +
+#   theme(axis.text = element_text(size = rel(1.2)),
+#         axis.text.y = element_blank(),
+#         axis.title = element_text(size = rel(1.3)),
+#         legend.position = c(0.15, 0.95),
+#         legend.direction = "vertical",
+#         legend.justification = c(0.2, 0.8),
+#         legend.background = element_rect(color = "black"),
+#         legend.text = element_text(size = rel(1.3)),
+#         plot.title = element_text(size = rel(1.5), face = "bold")) + 
+#   coord_flip()
 
 
 
@@ -384,4 +435,8 @@ yield_rug <-
 
 buff_fig | (yield_rug + leach_rug + plot_layout(ncol = 1, heights = c(4, 4)))
 #ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_yld-lch-buff-10-16-20.png")
-ggsave("fig2.png")
+ggsave("fig2-violin.png")
+
+buff_fig2 | (yield_rug + leach_rug + plot_layout(ncol = 1, heights = c(4, 4)))
+#ggsave("../../../Box/1_Gina_Projects/proj_Ncurve/fig_yld-lch-buff-10-16-20.png")
+ggsave("fig2-mirror.png")
