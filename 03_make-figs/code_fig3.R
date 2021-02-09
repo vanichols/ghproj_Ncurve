@@ -185,3 +185,26 @@ fig_dat %>%
   coord_cartesian(xlim = c(0, 250))
 
 ggsave("fig3_panels.png")
+
+
+quantile(rawdat$leaching_kgha, 0.1
+         )
+
+#--rafa's idea
+rawdat %>%
+  select(croprot, site_id, nrate_kgha, year, leaching_kgha) %>% 
+  group_by(nrate_kgha, croprot) %>% 
+  summarise(mdn = median(leaching_kgha),
+            lo = quantile(leaching_kgha, .75),
+            hi = quantile(leaching_kgha, .25)) %>% 
+  mutate(
+    croprotnice = dplyr::recode(croprot,
+                                corncc = "Continuous Maize",
+                                corncs = "Rotated Maize",
+                                soycs = "Rotated Soybean")) %>%
+  ggplot() + 
+  geom_line(aes(nrate_kgha, mdn, color = croprotnice), size = 2) + 
+  geom_ribbon(aes(nrate_kgha, ymin = lo, ymax = hi, fill = croprotnice), alpha = 0.2) + 
+  scale_fill_manual(values = c(clr1, clr2, clr3)) + 
+  scale_color_manual(values = c(clr1, clr2, clr3))  
+  
