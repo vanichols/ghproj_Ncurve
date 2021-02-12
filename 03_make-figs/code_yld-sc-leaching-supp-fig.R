@@ -11,7 +11,15 @@ theme_set(theme_bw())
 library(tidyverse)
 library(saapsim)
 
-datraw <- read_csv("01_proc-raw-outs/pro_apdat.csv") 
+siteinfo <- 
+  read_csv("01_proc-raw-outs/pro_site-info.csv") %>% 
+  select(site_id, site_id2)
+
+datraw <- 
+  read_csv("01_proc-raw-outs/pro_apdat.csv") %>% 
+  left_join(siteinfo) %>%
+  select(-site_id) %>% 
+  rename("site_id" = site_id2)
 
 datfits <- 
   read_csv("02_fit-curves/fc_blin-leach-parms-mm.csv") %>% 
@@ -37,7 +45,7 @@ dat %>%
   geom_vline(data = datfits, aes(xintercept = xs), linetype = "dashed", color = "red", size = 2) +
   facet_wrap(~rotation2) + 
   labs(x = "Nitrogen fertilizer rate\n(kg N /ha)",
-       y = "Corn yield per unit leached\n(kg grain yield / kg N leached)",
+       y = "Maize yield per unit leached\n(kg grain yield / kg N leached)",
        title = "Maize yield per unit N leached is maximized at fertilizer rates lower than leaching breakpoint")
 
 ggsave("fig_supp_leaching-scaled-yield.png")
@@ -48,7 +56,8 @@ dat %>%
   stat_summary(geom = "line", size = 3) +
   geom_vline(data = datfits, aes(xintercept = xs), linetype = "dashed", color = "red", size = 2) +
   facet_wrap(~rotation2) + 
-  labs(y = "Leaching per unit maize grain yield\n(kg N / kg grain)",
+  labs(x = "Nitrogen fertilizer rate\n(kg N /ha)",
+       y = "Leaching per unit maize grain yield\n(kg N / kg grain)",
        title = "Leaching per unit maize yield is minimized at fertizer rates lower than leaching breakpoint")
 
 ggsave("fig_supp_yield-scaled-leaching.png")
