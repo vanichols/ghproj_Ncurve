@@ -26,7 +26,11 @@ datfits <-
   select(rotation, xs) %>% 
   mutate(rotation = ifelse(rotation == "cs", "sc", rotation)) %>% 
   rename("rotation2" = rotation) %>% 
-  distinct()
+  distinct() %>% 
+  mutate(rotation2 = case_when(
+    grepl("cc", rotation2) ~ "Continuous Maize",
+    grepl("sc", rotation2) ~ "Rotated Maize"
+  ))
 
 
 dat <- 
@@ -36,7 +40,12 @@ dat <-
   mutate(yield_maize_kgha = saf_buac_to_kgha_corn(yield_maize_buac),
          rotation2 = ifelse(rotation == "cs", "sc", rotation)) %>% 
   mutate(Nleach_yield = nyear_leach_kgha_tot / yield_maize_kgha ,
-         leach_yield =  leaching_kgha / yield_maize_kgha) 
+         leach_yield =  leaching_kgha / yield_maize_kgha) %>% 
+  mutate(rotation2 = case_when(
+    grepl("cc", rotation2) ~ "Continuous Maize",
+    grepl("sc", rotation2) ~ "Rotated Maize"
+  ))
+
 
 dat %>% 
   ggplot(aes(nrate_kgha, 1/leach_yield)) + 
