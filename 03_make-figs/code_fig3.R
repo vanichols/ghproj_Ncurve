@@ -75,6 +75,12 @@ nlabs <-
   select(nrate_kgha, croprotnice, nrateF, nrateF2) %>% 
   distinct()
 
+library(ggtext)
+
+thing <- bquote("kg "~ha^-1~ "Fertilizer")
+bquote("Vc[max] ("*mu~ "mol" ~CO[2]~ m^-2~s^-1*")")
+
+
 rawdat %>% 
   arrange(nrate_kgha) %>% 
   mutate(
@@ -90,9 +96,14 @@ rawdat %>%
   ggplot(aes(x = leaching_kgha, y = nrateF2, fill = croprotnice)) +
   geom_density_ridges(alpha = 0.5) +
   geom_point(aes(x = mnleach, y = nrateF2), pch = 22, size = 3) +
-  geom_label(data = nlabs, aes(x = 175, y = nrateF2, label = paste(nrate_kgha, "kg N/ha Fertilizer"),
-                               vjust = -1, hjust = 0),
-             fill = "white") +
+  geom_richtext(
+    data = nlabs, aes(x = 175, y = nrateF2, label = paste(nrate_kgha, "kg ha<sup>-1</sup> Fertilizer"),
+                      vjust = -1, hjust = 0),
+    fill = "white") +
+  
+  # geom_label(data = nlabs, aes(x = 175, y = nrateF2, label = paste(nrate_kgha, "kg N/ha Fertilizer"),
+  #                              vjust = -1, hjust = 0),
+  #            fill = "white") +
   # geom_label(data = nlabs, aes(x = -50, y = nrateF2, label = paste(nrate_kgha, "kg N/ha Fertilizer"),
   #                              vjust = -2, hjust = 0),
   #            fill = "white") +
